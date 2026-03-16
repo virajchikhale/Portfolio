@@ -1,221 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Viraj Chikhale - Full Stack Developer</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title id="page-title">VC·OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Starfield Background -->
-    <div class="stars-container">
-        <div class="stars"></div>
-        <div class="stars2"></div>
-        <div class="stars3"></div>
+
+<!-- ══════════════════════════════════════════
+     BOOT SCREEN
+══════════════════════════════════════════ -->
+<div id="boot">
+  <div id="boot-screen">
+    <div class="boot-titlebar" id="boot-title-bar">VC·OS SYSTEM STARTUP v1.0</div>
+    <div class="boot-body">
+      <div class="boot-mac-wrap">
+        <canvas id="boot-canvas" width="32" height="32"></canvas>
+      </div>
+      <div class="boot-lines" id="boot-lines"></div>
+      <div class="boot-progress-wrap">
+        <div class="boot-progress-bar" id="boot-bar"></div>
+      </div>
+      <div class="boot-ver" id="boot-ver-line"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OS
+══════════════════════════════════════════ -->
+<div id="os">
+
+  <!-- MENU BAR -->
+  <div id="menubar">
+    <!-- Apple logo — clicking opens apple dropdown -->
+    <div class="mb-item" id="mb-apple" onclick="mbToggle('mb-apple')">&#63743;
+      <div class="mb-dropdown">
+        <div class="dd-row" id="menu-about-item" onclick="showAlert(CONFIG.meta.osName+' v1.0\nBuilt with \u2665 by '+CONFIG.user.name+'\n\n'+CONFIG.user.role+'\nMac OS 1984-inspired portfolio.')">&#9670; About VC&middot;OS</div>
+        <div class="dd-hr"></div>
+        <div class="dd-row" onclick="openWin('win-about')">&#128100; About Me</div>
+        <div class="dd-row" onclick="openWin('win-skills')">&#9889; Skills</div>
+        <div class="dd-row" onclick="openWin('win-projects')">&#128193; Projects</div>
+        <div class="dd-row" onclick="openWin('win-contact')">&#9993; Contact</div>
+        <div class="dd-row" onclick="openWin('win-ie')">&#127760; Internet Explorer</div>
+        <div class="dd-hr"></div>
+        <div class="dd-row" onclick="location.reload()">&#8635; Restart</div>
+      </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="nav-content">
-            <div class="nav-logo">
-                <span class="logo-text">Viraj Chikhale</span>
-            </div>
-            <ul class="nav-menu" role="menubar">
-                <!-- Navigation items will be populated by JavaScript -->
-            </ul>
-            <button class="mobile-menu-toggle" aria-label="Toggle menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-        </div>
-    </nav>
+    <div class="mb-sep-v"></div>
 
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="container">
-            <div class="hero-content">
-                
-                
-                <div class="hero-text">
-                    <h1 id="hero-name">Loading...</h1>
-                    <p id="hero-subtitle">Loading...</p>
-                    <div class="hero-avatar">
-                        <div class="avatar-ring"></div>
-                        <div class="avatar-inner">VC</div>
-                        <div class="orbit orbit-1">
-                            <div class="planet planet-1">⚛️</div>
-                        </div>
-                        <div class="orbit orbit-2">
-                            <div class="planet planet-2">🐍</div>
-                        </div>
-                        <div class="orbit orbit-3">
-                            <div class="planet planet-3">☁️</div>
-                        </div>
-                        <!-- <div class="orbit orbit-4">
-                            <div class="planet planet-4">☁️</div>
-                        </div>
-                        <div class="orbit orbit-5">
-                            <div class="planet planet-5">☁️</div>
-                        </div>
-                        <div class="orbit orbit-6">
-                            <div class="planet planet-6">☁️</div>
-                        </div> -->
-                    </div>
-                </div>
-                <div class="hero-text">
-                    <div class="hero-terminal">
-                        <div class="terminal-header">
-                            <div class="terminal-buttons">
-                                <div class="terminal-button red"></div>
-                                <div class="terminal-button yellow"></div>
-                                <div class="terminal-button green"></div>
-                            </div>
-                            <div class="terminal-title">cosmic-dev.js</div>
-                        </div>
-                        <div class="terminal-body">
-                            <div class="terminal-line">
-                            </div>
-                            <div class="terminal-output">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div class="mb-item" id="mb-file" onclick="mbToggle('mb-file')">FILE
+      <div class="mb-dropdown">
+        <div class="dd-row" onclick="openWin('win-about')">Open About.me</div>
+        <div class="dd-row" onclick="openWin('win-projects')">Open Projects</div>
+        <div class="dd-row" onclick="openWin('win-contact')">New Message</div>
+        <div class="dd-hr"></div>
+        <div class="dd-row" onclick="closeAll()">Close All</div>
+      </div>
+    </div>
 
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="container">
-            <h2 class="section-title">About Me</h2>
-            <div class="about-content">
-                <div class="about-text">
-                    <p id="about-intro">Loading bio from JSON...</p>
-                </div>
-                <div class="skills-constellation">
-                    <h3>Technical Skills</h3>
-                    <div id="skills-container" class="skills-grid">
-                        <!-- Skills will be populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <div class="mb-item" id="mb-view" onclick="mbToggle('mb-view')">VIEW
+      <div class="mb-dropdown">
+        <div class="dd-row" onclick="tileWindows()">Tile Windows</div>
+        <div class="dd-row" onclick="cascadeWindows()">Cascade</div>
+        <div class="dd-hr"></div>
+        <div class="dd-row" onclick="openWin('win-terminal')">Terminal</div>
+      </div>
+    </div>
 
-    <!-- Technologies Section -->
-    <section id="technologies" class="technologies">
-        <div class="container">
-            <h2 class="section-title">Technologies</h2>
-            <div id="tech-container" class="tech-categories">
-                <!-- Tech categories will be populated by JavaScript -->
-            </div>
-        </div>
-    </section>
+    <div class="mb-item" id="mb-help" onclick="mbToggle('mb-help')">HELP
+      <div class="mb-dropdown">
+        <div class="dd-row" onclick="termRun('help')">Commands</div>
+        <div class="dd-row" onclick="showAlert('Double-click desktop icons to open.\nDrag windows by title bar.\nResize from bottom-right corner.')">How to Use</div>
+      </div>
+    </div>
 
-    <!-- Projects Section -->
-    <section id="projects" class="projects">
-        <div class="container">
-            <h2 class="section-title">Featured Projects</h2>
-            <div id="projects-container" class="projects-grid">
-                <!-- Projects will be populated by JavaScript -->
-            </div>
-        </div>
-    </section>
+    <div class="mb-right" id="mb-clock">--:--</div>
+  </div>
 
-    <!-- Services Section -->
-    <section id="services" class="services">
-        <div class="container">
-            <h2 class="section-title">Services</h2>
-            <div id="services-container" class="services-grid">
-                <!-- Services will be populated by JavaScript -->
-            </div>
-        </div>
-    </section>
+  <!-- DESKTOP -->
+  <div id="desktop" onmousedown="desktopClick(event)">
 
-    <!-- Experience Section -->
-    <section id="experience" class="experience">
-        <div class="container">
-            <h2 class="section-title">Professional Journey</h2>
-            <div class="experience-universe">
-                <div class="timeline-constellation">
-                    <div class="constellation-line"></div>
-                    <div id="experience-container">
-                        <!-- Experience items will be populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- Retro marquee strip at bottom of desktop -->
+    <div id="desk-marquee" style="position:absolute;bottom:0;left:0;right:0;height:14px;border-top:1px solid rgba(0,0,0,0.12);overflow:hidden;z-index:2;pointer-events:none;display:flex;align-items:center;">
+      <span class="marquee-txt" style="font-size:6px;color:rgba(0,0,0,0.25);font-family:'Press Start 2P',monospace;">
+        <span id="marquee-text"></span>
+      </span>
+    </div>
 
-    <!-- Contact Section -->
-    <section id="contact" class="contact">
-        <div class="container">
-            <div class="contact-space-station">
-                <div class="contact-content">
-                    <div class="contact-terminal">
-                        <div class="terminal-screen">
-                            <div class="screen-header">
-                                <div class="screen-title">🚀 Mission Control</div>
-                                <div class="signal-strength">
-                                    <div class="signal-bar active"></div>
-                                    <div class="signal-bar active"></div>
-                                    <div class="signal-bar active"></div>
-                                    <div class="signal-bar"></div>
-                                </div>
-                            </div>
-                            <div class="screen-content">
-                                <div class="status-line">
-                                    <span class="status-label">Status:</span>
-                                    <span class="status-value online">ONLINE</span>
-                                </div>
-                                <div class="status-line">
-                                    <span class="status-label">Response Time:</span>
-                                    <span class="status-value">< 24 hours</span>
-                                </div>
-                                <div class="status-line">
-                                    <span class="status-label">Location:</span>
-                                    <span class="status-value">Digital Universe</span>
-                                </div>
-                                
-                                <div class="radar-container">
-                                    <div class="radar-screen">
-                                        <div class="radar-sweep"></div>
-                                        <div class="radar-dot dot-1"></div>
-                                        <div class="radar-dot dot-2"></div>
-                                        <div class="radar-dot dot-3"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="contact-form-container">
-                        <div class="form-header">
-                            <h3>Ready to embark on a cosmic coding journey?</h3>
-                            <p>Let's create something stellar together!</p>
-                        </div>
-                        
-                        <form id="contact-form" class="contact-form">
-                            <!-- Form fields will be populated by JavaScript -->
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- Pixel rain dots (injected by JS) -->
+    <div id="desk-rain" style="position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;"></div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <p>&copy; 2024 Viraj Chikhale. All rights reserved.</p>
-                <p>Crafted with ❤️ across the digital universe</p>
-            </div>
-        </div>
-    </footer>
+    <!-- Right-side desktop icons -->
+    <div class="desk-icons">
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-about')">
+        <canvas id="ic0" width="32" height="32"></canvas><span>About.me</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-skills')">
+        <canvas id="ic1" width="32" height="32"></canvas><span>Skills</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-projects')">
+        <canvas id="ic2" width="32" height="32"></canvas><span>Projects</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-terminal')">
+        <canvas id="ic3" width="32" height="32"></canvas><span>Terminal</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-contact')">
+        <canvas id="ic4" width="32" height="32"></canvas><span>Contact</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-ie')">
+        <canvas id="ic5" width="32" height="32"></canvas><span>Internet Explorer</span>
+      </div>
+    </div>
 
-    <script src="app-improved.js"></script>
+    <!-- ── ABOUT WINDOW ── -->
+    <div class="mac-win active" id="win-about" style="width:400px;top:36px;left:50px;z-index:20;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-about')">
+        <div class="tb-btn" onclick="closeWin('win-about')">&#215;</div>
+        <div class="tb-title" id="about-win-title">About</div>
+        <div class="tb-btn" onclick="zoomWin('win-about')">+</div>
+      </div>
+      <div class="mac-body">
+        <div class="wc" id="about-content"><!-- rendered by renderFromConfig() --></div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-about')"></div>
+    </div>
+
+    <!-- ── SKILLS WINDOW ── -->
+    <div class="mac-win" id="win-skills" style="width:320px;top:44px;left:480px;z-index:19;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-skills')">
+        <div class="tb-btn" onclick="closeWin('win-skills')">&#215;</div>
+        <div class="tb-title">skills.json</div>
+        <div class="tb-btn" onclick="zoomWin('win-skills')">+</div>
+      </div>
+      <div class="mac-body">
+        <div class="wc" id="skills-content"><!-- rendered by renderFromConfig() --></div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-skills')"></div>
+    </div>
+
+    <!-- ── PROJECTS WINDOW ── -->
+    <div class="mac-win" id="win-projects" style="width:440px;top:340px;left:50px;z-index:18;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-projects')">
+        <div class="tb-btn" onclick="closeWin('win-projects')">&#215;</div>
+        <div class="tb-title">Projects Folder</div>
+        <div class="tb-btn" onclick="zoomWin('win-projects')">+</div>
+      </div>
+      <div class="mac-body">
+        <div class="wc" id="projects-content"><!-- rendered by renderFromConfig() --></div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-projects')"></div>
+    </div>
+
+    <!-- ── TERMINAL WINDOW ── -->
+    <div class="mac-win" id="win-terminal" style="width:480px;height:340px;top:320px;left:480px;z-index:17;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-terminal')">
+        <div class="tb-btn" onclick="closeWin('win-terminal')">&#215;</div>
+        <div class="tb-title" id="term-title">Terminal &mdash; VC&middot;OS</div>
+        <div class="tb-btn" onclick="zoomWin('win-terminal')">+</div>
+      </div>
+      <!-- mac-body is flex column here, overflow:hidden, inner term-out scrolls -->
+      <div class="mac-body" style="position:relative;">
+        <!-- GAME OVERLAY — sits on top of terminal when a game is running -->
+        <div id="game-overlay">
+          <div id="game-header">
+            <span id="game-title">SNAKE</span>
+            <span id="game-score">SCORE: 0</span>
+            <button onclick="gameQuit()">&#215; QUIT</button>
+          </div>
+          <div id="game-canvas-wrap">
+            <canvas id="game-canvas" width="240" height="200"></canvas>
+            <div id="game-msg"></div>
+          </div>
+          <div id="game-footer" id="game-controls">ARROWS / WASD to move &middot; SPACE to pause &middot; Q to quit</div>
+        </div>
+        <!-- Normal terminal -->
+        <div class="term-inner">
+          <div id="term-out">
+            <div id="term-welcome-line1" style="margin-bottom:2px;"></div>
+            <div id="term-welcome-line2" style="color:#777;font-size:7px;margin-bottom:2px;"></div>
+            <div style="color:#aaa;font-size:6px;margin-bottom:8px;">Type <b style="color:#000">help</b> for commands<span class="blink">_</span></div>
+          </div>
+          <div class="term-input-row">
+            <span class="t-prompt" id="term-prompt-label">$</span>
+            <input id="term-in" type="text" autocomplete="off" spellcheck="false" onkeydown="termKey(event)" placeholder=""/>
+          </div>
+        </div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-terminal')"></div>
+    </div>
+
+    <!-- ── CONTACT WINDOW ── -->
+    <div class="mac-win" id="win-contact" style="width:310px;top:60px;left:240px;z-index:16;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-contact')">
+        <div class="tb-btn" onclick="closeWin('win-contact')">&#215;</div>
+        <div class="tb-title">New Message</div>
+        <div class="tb-btn" onclick="zoomWin('win-contact')">+</div>
+      </div>
+      <div class="mac-body">
+        <div class="wc">
+          <div class="cf-field">
+            <label>TO:</label>
+            <input type="text" id="contact-email-to" value="" readonly/>
+          </div>
+          <div class="cf-field">
+            <label>FROM:</label>
+            <input type="email" placeholder="your@email.com"/>
+          </div>
+          <div class="cf-field">
+            <label>SUBJECT:</label>
+            <input type="text" placeholder="Hello!"/>
+          </div>
+          <div class="cf-field">
+            <label>MESSAGE:</label>
+            <textarea placeholder="Type your message..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="mac-btn inv" id="send-btn" onclick="handleSend()">SEND</button>
+            <button class="mac-btn" onclick="closeWin('win-contact')">CANCEL</button>
+          </div>
+        </div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-contact')"></div>
+    </div>
+
+    <!-- ── INTERNET EXPLORER WINDOW ── -->
+    <div class="mac-win" id="win-ie" style="width:660px;height:460px;top:30px;left:80px;z-index:15;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-ie')">
+        <div class="tb-btn" onclick="closeWin('win-ie')">&#215;</div>
+        <div class="tb-title" id="ie-title">Internet Explorer &mdash; PY&middot;OS</div>
+        <div class="tb-btn" onclick="zoomWin('win-ie')">+</div>
+      </div>
+      <!-- Toolbar -->
+      <div class="ie-toolbar">
+        <button class="ie-nav-btn" id="ie-back" onclick="ieBack()" title="Back" disabled>&#9664;</button>
+        <button class="ie-nav-btn" id="ie-fwd"  onclick="ieFwd()"  title="Forward" disabled>&#9654;</button>
+        <button class="ie-nav-btn" onclick="ieReload()" title="Reload">&#8635;</button>
+        <button class="ie-nav-btn" onclick="ieHome()"   title="Home">&#8962;</button>
+        <button class="ie-nav-btn" id="ie-fav-toggle" onclick="ieFavToggle()" title="Favorites">&#9733;</button>
+        <input  class="ie-url-bar" id="ie-url" type="text" value="about:blank" onkeydown="if(event.key==='Enter')ieNavigate()"/>
+        <button class="ie-go-btn"  onclick="ieNavigate()">GO</button>
+      </div>
+      <!-- Content area: fav sidebar + preview viewport -->
+      <div class="mac-body">
+        <div class="ie-content-area">
+          <!-- Favorites sidebar -->
+          <div class="ie-fav-bar hidden" id="ie-fav-bar"><!-- rendered by renderFromConfig() --></div>
+          <!-- Preview viewport — no iframe, pure card rendering -->
+          <div id="ie-viewport">
+            <div id="ie-loading">
+              <div class="ie-loading-txt" id="ie-loading-txt">Connecting...</div>
+              <div class="ie-loading-bar-wrap"><div class="ie-loading-bar" id="ie-loading-bar"></div></div>
+            </div>
+            <div id="ie-page-content"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Status bar -->
+      <div class="ie-statusbar">
+        <div class="ie-status-dot done" id="ie-dot"></div>
+        <span id="ie-status">Ready</span>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-ie')"></div>
+    </div>
+
+  </div><!-- /desktop -->
+
+  <!-- DOCK -->
+  <div id="dock">
+    <div class="dk-item running" id="dk-about" onclick="toggleWin('win-about')">
+      <canvas id="dk0" width="36" height="36"></canvas>
+      <span class="dk-label">About</span>
+    </div>
+    <div class="dk-item running" id="dk-skills" onclick="toggleWin('win-skills')">
+      <canvas id="dk1" width="36" height="36"></canvas>
+      <span class="dk-label">Skills</span>
+    </div>
+    <div class="dk-item running" id="dk-projects" onclick="toggleWin('win-projects')">
+      <canvas id="dk2" width="36" height="36"></canvas>
+      <span class="dk-label">Projects</span>
+    </div>
+    <div class="dk-item running" id="dk-terminal" onclick="toggleWin('win-terminal')">
+      <canvas id="dk3" width="36" height="36"></canvas>
+      <span class="dk-label">Terminal</span>
+    </div>
+    <div class="dk-sep"></div>
+    <div class="dk-item" id="dk-contact" onclick="toggleWin('win-contact')">
+      <canvas id="dk4" width="36" height="36"></canvas>
+      <span class="dk-label">Contact</span>
+    </div>
+    <div class="dk-sep"></div>
+    <div class="dk-item" id="dk-ie" onclick="toggleWin('win-ie')">
+      <canvas id="dk5" width="36" height="36"></canvas>
+      <span class="dk-label">Explorer</span>
+    </div>
+    <!--
+      ADD YOUR APP:
+      <div class="dk-sep"></div>
+      <div class="dk-item" id="dk-myapp" onclick="toggleWin('win-myapp')">
+        <canvas id="dk6" width="36" height="36"></canvas>
+        <span class="dk-label">My App</span>
+      </div>
+    -->
+  </div>
+
+</div><!-- /os -->
+
+<!-- ALERT -->
+<div id="mac-alert">
+  <div class="alert-box">
+    <p id="alert-msg"></p>
+    <div class="alert-btns">
+      <button class="mac-btn inv" onclick="document.getElementById('mac-alert').classList.remove('show')">OK</button>
+    </div>
+  </div>
+</div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
