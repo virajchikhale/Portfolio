@@ -85,11 +85,7 @@ function renderFromConfig(){
           </div>
         </div>`;
     }).join('');
-    projEl.innerHTML = cards + `
-      <div class="pc" style="border-style:dashed;opacity:0.35;">
-        <div class="pc-head" style="background:none;"><span style="background:none;color:#999;">+ ADD PROJECT IN CONFIG.projects[]</span></div>
-        <div class="pc-body"><p style="color:#aaa;font-size:6px;">Add an object to CONFIG.projects and it will appear here automatically.</p></div>
-      </div>`;
+    projEl.innerHTML = cards;
   }
 
   /* ── Contact email ──────────────────────────────────────────── */
