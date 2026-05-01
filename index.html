@@ -156,7 +156,7 @@
     </div>
 
     <!-- ── TERMINAL WINDOW ── -->
-    <div class="mac-win" id="win-terminal" style="width:480px;height:340px;top:320px;left:480px;z-index:17;">
+    <div class="mac-win" id="win-terminal" style="width:480px;height:340px;top:320px;left:480px;z-index:17;display:none;">
       <div class="mac-tb" onmousedown="tbDown(event,'win-terminal')">
         <div class="tb-btn" onclick="closeWin('win-terminal')">&#215;</div>
         <div class="tb-title" id="term-title">Terminal &mdash; VC&middot;OS</div>
@@ -175,7 +175,7 @@
             <canvas id="game-canvas" width="240" height="200"></canvas>
             <div id="game-msg"></div>
           </div>
-          <div id="game-footer" id="game-controls">ARROWS / WASD to move &middot; SPACE to pause &middot; Q to quit</div>
+          <div id="game-footer">ARROWS / WASD to move &middot; SPACE to pause &middot; Q to quit</div>
         </div>
         <!-- Normal terminal -->
         <div class="term-inner">
@@ -231,7 +231,7 @@
     <div class="mac-win" id="win-ie" style="width:660px;height:460px;top:30px;left:80px;z-index:15;display:none;">
       <div class="mac-tb" onmousedown="tbDown(event,'win-ie')">
         <div class="tb-btn" onclick="closeWin('win-ie')">&#215;</div>
-        <div class="tb-title" id="ie-title">Internet Explorer &mdash; PY&middot;OS</div>
+        <div class="tb-title" id="ie-title">Internet Explorer &mdash; VC&middot;OS</div>
         <div class="tb-btn" onclick="zoomWin('win-ie')">+</div>
       </div>
       <!-- Toolbar -->
@@ -275,15 +275,15 @@
       <canvas id="dk0" width="36" height="36"></canvas>
       <span class="dk-label">About</span>
     </div>
-    <div class="dk-item running" id="dk-skills" onclick="toggleWin('win-skills')">
+    <div class="dk-item" id="dk-skills" onclick="toggleWin('win-skills')">
       <canvas id="dk1" width="36" height="36"></canvas>
       <span class="dk-label">Skills</span>
     </div>
-    <div class="dk-item running" id="dk-projects" onclick="toggleWin('win-projects')">
+    <div class="dk-item" id="dk-projects" onclick="toggleWin('win-projects')">
       <canvas id="dk2" width="36" height="36"></canvas>
       <span class="dk-label">Projects</span>
     </div>
-    <div class="dk-item running" id="dk-terminal" onclick="toggleWin('win-terminal')">
+    <div class="dk-item" id="dk-terminal" onclick="toggleWin('win-terminal')">
       <canvas id="dk3" width="36" height="36"></canvas>
       <span class="dk-label">Terminal</span>
     </div>

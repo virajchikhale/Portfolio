@@ -904,3 +904,275 @@ body{
   .cf-field input, .cf-field textarea { font-size: 9px; padding: 8px; }
   .mac-btn { padding: 10px 16px; font-size: 9px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE — applied when <body data-theme="dark">
+   Flips the black-on-white Mac aesthetic to white-on-dark.
+   None of these rules existed before; that's why dark/light
+   terminal commands had no visible effect.
+══════════════════════════════════════════════════════════════ */
+
+body[data-theme="dark"]{ background:#111; color:#e8e8e8; }
+
+/* ── Menu bar ────────────────────────────────────────────────── */
+body[data-theme="dark"] #menubar{ background:#1a1a1a; border-bottom-color:#555; }
+body[data-theme="dark"] .mb-item:hover,
+body[data-theme="dark"] .mb-item.open{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mb-sep-v{ background:#444; }
+body[data-theme="dark"] .mb-right{ color:#888; }
+body[data-theme="dark"] .mb-dropdown{ background:#1a1a1a; border-color:#555; box-shadow:3px 3px 0 #000; }
+body[data-theme="dark"] .dd-row{ color:#ddd; border-bottom-color:#333; }
+body[data-theme="dark"] .dd-row:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .dd-hr{ background:#555; }
+
+/* ── Desktop ─────────────────────────────────────────────────── */
+body[data-theme="dark"] #desktop{
+  background:#111;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(255,255,255,0.04) 19px,rgba(255,255,255,0.04) 20px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(255,255,255,0.04) 19px,rgba(255,255,255,0.04) 20px);
+}
+body[data-theme="dark"] #desktop::after{
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,0.02) 0px,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 4px);
+}
+body[data-theme="dark"] .dsk-icon:hover,
+body[data-theme="dark"] .dsk-icon.sel{ border-color:#666; background:rgba(255,255,255,0.07); }
+body[data-theme="dark"] .dsk-icon span{ color:#ddd; }
+
+/* ── Dock ────────────────────────────────────────────────────── */
+body[data-theme="dark"] #dock{ background:#1a1a1a; border-top-color:#555; }
+body[data-theme="dark"] #dock::after{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1a1a1a 4px,#1a1a1a 8px);
+}
+body[data-theme="dark"] .dk-item:hover{ background:rgba(255,255,255,0.08); border-color:#666; box-shadow:0 4px 0 #000; }
+body[data-theme="dark"] .dk-item.running::after{ background:#e8e8e8; }
+body[data-theme="dark"] .dk-label{ color:#bbb; }
+body[data-theme="dark"] .dk-sep{ background:repeating-linear-gradient(180deg,#555 0,#555 3px,#1a1a1a 3px,#1a1a1a 6px); }
+
+/* ── Windows ─────────────────────────────────────────────────── */
+body[data-theme="dark"] .mac-win{ background:#1e1e1e; border-color:#555; box-shadow:4px 4px 0 #000; }
+body[data-theme="dark"] .mac-tb{ background:#2a2a2a; border-bottom-color:#555; }
+body[data-theme="dark"] .mac-win.active .mac-tb{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .mac-win.active .mac-tb .tb-title{ background:#2a2a2a; color:#e8e8e8; }
+body[data-theme="dark"] .tb-btn{ border-color:#666; background:#2a2a2a; color:#ddd; }
+body[data-theme="dark"] .tb-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .tb-title{ color:#e8e8e8; }
+body[data-theme="dark"] .mac-body::-webkit-scrollbar-track{ background:#1e1e1e; border-left-color:#444; }
+body[data-theme="dark"] .mac-body::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1e1e1e 2px,#1e1e1e 4px);
+  border-color:#444;
+}
+body[data-theme="dark"] .mac-rsz{
+  background:
+    linear-gradient(135deg,transparent 40%,#555 40%,#555 55%,transparent 55%) no-repeat 2px 2px / 10px 10px,
+    linear-gradient(135deg,transparent 40%,#555 40%,#555 55%,transparent 55%) no-repeat 6px 6px / 8px 8px;
+}
+body[data-theme="dark"] .divider{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1e1e1e 4px,#1e1e1e 6px);
+}
+
+/* ── About ───────────────────────────────────────────────────── */
+body[data-theme="dark"] .aw-avatar{ border-color:#555; }
+body[data-theme="dark"] .aw-info p{ color:#aaa; }
+body[data-theme="dark"] .stat-box{ border-color:#555; }
+body[data-theme="dark"] .stat-box .sl{ color:#888; }
+body[data-theme="dark"] .badge{ border-color:#555; background:#2a2a2a; color:#ddd; }
+body[data-theme="dark"] .badge:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Skills ──────────────────────────────────────────────────── */
+body[data-theme="dark"] .sk-cat-h{ border-bottom-color:#555; }
+body[data-theme="dark"] .chip{ border-color:#555; color:#ddd; }
+body[data-theme="dark"] .chip:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Projects ────────────────────────────────────────────────── */
+body[data-theme="dark"] .pc{ border-color:#555; background:#1e1e1e; }
+body[data-theme="dark"] .pc-head{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .pc-head span{ background:#1e1e1e; color:#e8e8e8; }
+body[data-theme="dark"] .pc-body p{ color:#aaa; }
+body[data-theme="dark"] .pc-tag{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .pc-link{ border-color:#555; color:#ddd; background:#2a2a2a; }
+body[data-theme="dark"] .pc-link:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Terminal ────────────────────────────────────────────────── */
+body[data-theme="dark"] .term-inner{ background:#111; }
+body[data-theme="dark"] #term-out::-webkit-scrollbar-track{ background:#111; border-left-color:#333; }
+body[data-theme="dark"] #term-out::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#111 2px,#111 4px);
+  border-color:#333;
+}
+body[data-theme="dark"] .term-block .t-cmd{ color:#e8e8e8; }
+body[data-theme="dark"] .term-block .t-out{ color:#aaa; }
+body[data-theme="dark"] .term-block .t-err{ color:#ff6b6b; }
+body[data-theme="dark"] .term-input-row{ background:#111; border-top-color:#444; }
+body[data-theme="dark"] .term-input-row .t-prompt{ color:#e8e8e8; }
+body[data-theme="dark"] #term-in{ color:#e8e8e8; caret-color:#e8e8e8; }
+
+/* ── Game overlay ────────────────────────────────────────────── */
+body[data-theme="dark"] #game-overlay{ background:#111; border-top-color:#444; }
+body[data-theme="dark"] #game-header{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+  border-bottom-color:#555;
+}
+body[data-theme="dark"] #game-header span{ background:#2a2a2a; color:#e8e8e8; }
+body[data-theme="dark"] #game-canvas-wrap{ background:#111; }
+body[data-theme="dark"] #game-footer{ background:#1a1a1a; border-top-color:#444; color:#888; }
+body[data-theme="dark"] #game-msg{ background:#1e1e1e; border-color:#555; box-shadow:3px 3px 0 #000; color:#e8e8e8; }
+
+/* ── Contact ─────────────────────────────────────────────────── */
+body[data-theme="dark"] .cf-field label{ color:#ccc; }
+body[data-theme="dark"] .cf-field input,
+body[data-theme="dark"] .cf-field textarea{ background:#1e1e1e; border-color:#555; color:#e8e8e8; }
+body[data-theme="dark"] .cf-field input:focus,
+body[data-theme="dark"] .cf-field textarea:focus{ outline-color:#777; }
+body[data-theme="dark"] .mac-btn{ background:#2a2a2a; border-color:#555; color:#ddd; box-shadow:2px 2px 0 #000; }
+body[data-theme="dark"] .mac-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mac-btn.inv{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mac-btn.inv:hover{ background:#ccc; }
+
+/* ── Internet Explorer ───────────────────────────────────────── */
+body[data-theme="dark"] .ie-toolbar{ background:#1a1a1a; border-bottom-color:#555; }
+body[data-theme="dark"] .ie-nav-btn{ background:#2a2a2a; border-color:#555; color:#ddd; }
+body[data-theme="dark"] .ie-nav-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-nav-btn:disabled:hover{ background:#2a2a2a; color:#555; }
+body[data-theme="dark"] .ie-url-bar{ background:#111; border-color:#555; color:#e8e8e8; }
+body[data-theme="dark"] .ie-go-btn{ background:#e8e8e8; color:#111; border-color:#555; }
+body[data-theme="dark"] .ie-go-btn:hover{ background:#ccc; }
+body[data-theme="dark"] .ie-statusbar{ background:#1a1a1a; border-top-color:#555; color:#888; }
+body[data-theme="dark"] .ie-status-dot{ border-color:#555; }
+body[data-theme="dark"] .ie-status-dot.done{ background:#333; }
+/* fav sidebar */
+body[data-theme="dark"] .ie-fav-bar{ background:#1a1a1a; border-right-color:#555; }
+body[data-theme="dark"] .ie-fav-bar::-webkit-scrollbar-track{ background:#1a1a1a; border-left-color:#333; }
+body[data-theme="dark"] .ie-fav-bar::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1a1a1a 2px,#1a1a1a 4px);
+  border-color:#333;
+}
+body[data-theme="dark"] .ie-fav-title{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .ie-fav-title span{ background:#1a1a1a; color:#e8e8e8; }
+body[data-theme="dark"] .ie-fav-item{ color:#ccc; border-bottom-color:#333; }
+body[data-theme="dark"] .ie-fav-item:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-fav-cat{ color:#666; background:#111; border-bottom-color:#333; }
+/* viewport & cards */
+body[data-theme="dark"] #ie-viewport{ background:#1e1e1e; }
+body[data-theme="dark"] #ie-viewport::-webkit-scrollbar-track{ background:#1e1e1e; border-left-color:#444; }
+body[data-theme="dark"] #ie-viewport::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1e1e1e 2px,#1e1e1e 4px);
+  border-color:#444;
+}
+body[data-theme="dark"] #ie-loading{ background:#1e1e1e; }
+body[data-theme="dark"] .ie-loading-txt{ color:#888; }
+body[data-theme="dark"] .ie-card-banner{ border-color:#555; }
+body[data-theme="dark"] .ie-card-info{ border-color:#555; }
+body[data-theme="dark"] .ie-card-logo{ border-color:#555; background:#2a2a2a; }
+body[data-theme="dark"] .ie-card-name{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-card-url{ color:#888; }
+body[data-theme="dark"] .ie-card-desc{ color:#aaa; }
+body[data-theme="dark"] .ie-card-tag{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .ie-card-divider{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1e1e1e 4px,#1e1e1e 6px);
+}
+body[data-theme="dark"] .ie-card-stats{ border-color:#555; }
+body[data-theme="dark"] .ie-stat{ border-right-color:#444; }
+body[data-theme="dark"] .ie-stat .isv{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-stat .isl{ color:#777; }
+body[data-theme="dark"] .ie-action-btn.ghost{ background:#2a2a2a; color:#ddd; box-shadow:2px 2px 0 #000; }
+body[data-theme="dark"] .ie-action-btn.ghost:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-newtab-hint{ color:#555; border-top-color:#333; }
+body[data-theme="dark"] .ie-home-title{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-home-sub{ color:#888; }
+body[data-theme="dark"] .ie-home-link{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .ie-home-link:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Alert dialog ────────────────────────────────────────────── */
+body[data-theme="dark"] .alert-box{ background:#1e1e1e; border-color:#555; box-shadow:5px 5px 0 #000; color:#e8e8e8; }
+
+/* ── IE Fav toggle — CSS class replaces inline style ────────── */
+/* ieFavToggle() now adds/removes class "active" instead of inline style */
+#ie-fav-toggle.active{ background:#000 !important; color:#fff !important; }
+body[data-theme="dark"] #ie-fav-toggle{ background:#2a2a2a; border-color:#555; color:#ddd; }
+body[data-theme="dark"] #ie-fav-toggle.active{ background:#e8e8e8 !important; color:#111 !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE POLISH — Phase 2
+   Fixes: icon visibility, grey text contrast, projects scroll
+══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Canvas icons: invert black pixel art to white in dark mode ── */
+/* Desktop icons and dock icons are canvas-drawn with #000;
+   filter:invert(1) flips them to white so they're visible on dark bg */
+body[data-theme="dark"] .dsk-icon canvas{
+  filter: invert(1);
+}
+body[data-theme="dark"] .dk-item canvas{
+  filter: invert(1);
+}
+/* Avatar in About window — invert so it shows on dark background */
+body[data-theme="dark"] #av-canvas{
+  filter: invert(1);
+}
+
+/* ── 2. Grey text brightening for readability ─────────────────── */
+/* About window: bio text was #333 (near-invisible on dark) */
+body[data-theme="dark"] #about-content p[style],
+body[data-theme="dark"] .aw-info p{ color:#c8c8c8 !important; }
+
+/* Skills window header */
+body[data-theme="dark"] .sk-cat-h{ color:#e0e0e0; }
+
+/* Projects window: card body paragraph text (#333 → bright) */
+body[data-theme="dark"] .pc-body p{ color:#c0c0c0 !important; }
+
+/* PC tag text */
+body[data-theme="dark"] .pc-tag{ color:#d0d0d0; }
+
+/* Stat box sub-label */
+body[data-theme="dark"] .stat-box .sl{ color:#aaa; }
+
+/* IE card description & URL */
+body[data-theme="dark"] .ie-card-desc{ color:#c0c0c0 !important; }
+body[data-theme="dark"] .ie-card-url{ color:#999; }
+
+/* Terminal output text */
+body[data-theme="dark"] .term-block .t-out{ color:#c8c8c8; }
+
+/* Footer / hint text */
+body[data-theme="dark"] .ie-stat .isl{ color:#999; }
+
+/* Desktop icon labels were #ddd but may be low-contrast */
+body[data-theme="dark"] .dsk-icon span{ color:#e8e8e8 !important; }
+
+/* Inline hardcoded grey text in terminal welcome (see index.html line 184-185) */
+body[data-theme="dark"] #term-out [style*="color:#777"],
+body[data-theme="dark"] #term-out [style*="color:#aaa"]{
+  color:#aaa !important;
+}
+body[data-theme="dark"] #term-out b[style*="color:#000"]{
+  color:#e8e8e8 !important;
+}
+
+/* Dock running dot — ensure it's visible */
+body[data-theme="dark"] .dk-item.running::after{
+  background:#e8e8e8;
+  box-shadow: 0 0 3px #e8e8e8;
+}
+
+/* ── 3. Projects window — enforce height so mac-body can scroll ── */
+/* Without a height, mac-win grows to fit all content (no overflow).
+   Setting max-height makes mac-body's overflow:auto kick in. */
+#win-projects{
+  height: 400px;
+}
+/* On mobile this is handled by the full-screen override already */
+@media (min-width: 769px){
+  #win-projects{
+    max-height: calc(100vh - 120px); /* never taller than viewport minus bars */
+  }
+}
+
+

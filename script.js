@@ -346,12 +346,10 @@ function initOS(){
    CLOCK
 ══════════════════════════════════════════════════════ */
 function startClock(){
-  const el = document.getElementById('mb-clock');
-  const tick = ()=>{
-    const d = new Date();
-    el.textContent = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-  };
-  tick(); setInterval(tick, 1000);
+  // Legacy placeholder — a full clock implementation with blinking colon
+  // is defined later in the file. Keep a harmless stub here so calls
+  // to startClock() (from init) are safe and deduplicated.
+  return;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -400,6 +398,14 @@ function openWin(id){
   void el.offsetWidth;
   el.classList.add('win-open-anim');
   bringFront(id);
+  // When opening a window, reset common scrollable panes so users don't
+  // see stale scroll positions (fixes various scroll bugs reported).
+  try{
+    const body = el.querySelector('.mac-body'); if(body) body.scrollTop = 0;
+    const termOut = el.querySelector('#term-out'); if(termOut) termOut.scrollTop = termOut.scrollHeight;
+    const ieVp = el.querySelector('#ie-viewport'); if(ieVp) ieVp.scrollTop = 0;
+    const favBar = el.querySelector('#ie-fav-bar'); if(favBar) favBar.scrollTop = 0;
+  }catch(e){/* non-fatal */}
   // dock dot
   const dk = document.getElementById(WIN_DOCK[id]);
   if(dk) dk.classList.add('running');
@@ -565,6 +571,9 @@ const CMDS = {
       '<span class="t-out">  date     &mdash; current time</span>',
       '<span class="t-out">  matrix   &mdash; neural matrix</span>',
       '<span class="t-out">  clear    &mdash; clear screen</span>',
+      '<span class="t-out">  dark     &mdash; dark mode</span>',
+  '<span class="t-out">  light    &mdash; light mode</span>',
+  '<span class="t-out">  toggle   &mdash; toggle dark / light mode</span>',
       '<span class="t-out" style="color:#000;text-decoration:underline;">GAMES</span>',
       '<span class="t-out">  snake    &mdash; classic snake</span>',
       '<span class="t-out">  tetris   &mdash; falling blocks</span>',
@@ -580,13 +589,17 @@ const CMDS = {
     '<span class="t-out">  Code   : Python, TypeScript, Bash</span>',
     '<span class="t-out">  Infra  : Docker, AWS, FastAPI, Linux</span>',
   ].join(''); },
-  projects: ()=>{ snd('open'); openWin('win-projects'); return `<span class="t-out">Opening Projects...</span>`; },
+  projects: ()=>{ snd('open'); openWin('win-projects'); const projEl=document.getElementById('projects-content'); if(projEl) projEl.scrollTop=0; return `<span class="t-out">Opening Projects...</span>`; },
   contact:  ()=>{ snd('open'); openWin('win-contact');  return `<span class="t-out">Opening Contact...</span>`; },
   github:   ()=>{ snd('open'); ieOpen((CONFIG.links.find(l=>l.label.includes('GitHub'))||{}).url||'https://github.com'); return `<span class="t-out">Opening GitHub in Explorer...</span>`; },
   linkedin: ()=>{ snd('open'); ieOpen((CONFIG.links.find(l=>l.label.includes('LinkedIn'))||{}).url||'https://linkedin.com'); return `<span class="t-out">Opening LinkedIn in Explorer...</span>`; },
   ie:       ()=>{ snd('open'); openWin('win-ie'); return `<span class="t-out">Launching Internet Explorer...</span>`; },
   date:     ()=>{ snd('click'); return `<span class="t-out">${new Date().toLocaleString()}</span>`; },
   matrix:   ()=>{ snd('chime'); startMatrixEgg(); return `<span class="t-out">INITIATING NEURAL MATRIX...</span>`; },
+  dark:     ()=>{ snd('click'); setTheme('dark');  return `<span class="t-out">Theme set to DARK MODE. Type 'light' to switch back.</span>`; },
+  light:    ()=>{ snd('click'); setTheme('light'); return `<span class="t-out">Theme set to LIGHT MODE. Type 'dark' to switch back.</span>`; },
+  toggle:   ()=>{ snd('click'); const cur=document.body.dataset.theme||'light'; const next = cur==='dark'?'light':'dark'; setTheme(next); return `<span class="t-out">Theme toggled to ${next.toUpperCase()} MODE.</span>`; },
+  theme:    ()=>{ snd('click'); const t=document.body.dataset.theme||'light'; return `<span class="t-out">Current theme: ${t.toUpperCase()}. Use 'dark' or 'light' to switch.</span>`; },
   snake:    ()=>{ snd('game'); setTimeout(()=>gameStart('snake'),60);    return `<span class="t-out">Loading SNAKE...</span><span class="t-out">  ARROWS/WASD=move  SPACE=pause  Q=quit</span>`; },
   tetris:   ()=>{ snd('game'); setTimeout(()=>gameStart('tetris'),60);   return `<span class="t-out">Loading TETRIS...</span><span class="t-out">  ARROWS/WASD=move  SPACE=drop   Q=quit</span>`; },
   invaders: ()=>{ snd('game'); setTimeout(()=>gameStart('invaders'),60); return `<span class="t-out">Loading SPACE INVADERS...</span><span class="t-out">  LEFT/RIGHT=move   SPACE=shoot  Q=quit</span>`; },
@@ -636,13 +649,39 @@ function termRun(cmd){
 }
 
 /* ══════════════════════════════════════════════════════
+   THEME SWITCHER — dark / light mode
+══════════════════════════════════════════════════════ */
+function setTheme(mode){
+  document.body.dataset.theme = mode;
+  localStorage.setItem('vc-os-theme', mode);
+}
+
+// Apply saved theme on load (called before runBoot)
+(function(){
+  const saved = localStorage.getItem('vc-os-theme');
+  if(saved) document.body.dataset.theme = saved;
+})();
+
+/* ══════════════════════════════════════════════════════
    CONTACT SEND
 ══════════════════════════════════════════════════════ */
 function handleSend(){
-  const btn = document.getElementById('send-btn');
+  const fromEl = document.querySelector('#win-contact input[type="email"]');
+  const subjEl = document.querySelector('#win-contact input[type="text"]:not([readonly])');
+  const msgEl  = document.querySelector('#win-contact textarea');
+  const btn    = document.getElementById('send-btn');
+
+  if(!fromEl.value.trim()||!subjEl.value.trim()||!msgEl.value.trim()){
+    snd('alert');
+    showAlert('Please fill in all fields\nbefore sending.');
+    return;
+  }
+  // Build mailto link for actual email delivery
+  const mailto = `mailto:${CONFIG.user.email}?subject=${encodeURIComponent(subjEl.value.trim())}&body=${encodeURIComponent('From: '+fromEl.value.trim()+'\n\n'+msgEl.value.trim())}`;
+  window.location.href = mailto;
   btn.textContent = '✓ SENT!';
   btn.disabled = true;
-  setTimeout(()=>{ btn.textContent='SEND'; btn.disabled=false; }, 2500);
+  setTimeout(()=>{ btn.textContent='SEND'; btn.disabled=false; fromEl.value=''; subjEl.value=''; msgEl.value=''; }, 3000);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -991,8 +1030,6 @@ function ieFallbackUnknown(url, host){
 }
 
 /* Main render function */
-
-/* Main render function */
 function ieRenderCard(key, url){
   const site = IE_SITES[key];
   const el = document.getElementById('ie-page-content');
@@ -1200,9 +1237,11 @@ function ieFavToggle(){
   const bar = document.getElementById('ie-fav-bar');
   const btn = document.getElementById('ie-fav-toggle');
   bar.classList.toggle('hidden', !ieFavVisible);
-  btn.style.background = ieFavVisible ? '#000' : '#fff';
-  btn.style.color = ieFavVisible ? '#fff' : '#000';
+  // Toggle CSS class instead of inline style so dark-mode theming works
+  btn.classList.toggle('active', ieFavVisible);
 }
+
+
 
 
 
