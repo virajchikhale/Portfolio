@@ -73,7 +73,7 @@ class PgVectorStore:
 
     def __init__(self, settings: Settings):
         if settings.database_url is None:
-            raise RAGError("DATABASE_URL is required when VECTOR_STORE=pgvector")
+            raise RAGError("DATABASE_URL is required when VECTOR_STORE=pgvector", "database_url_missing")
         self._url = settings.database_url.get_secret_value()
         self._dim = int(settings.embedding_dim)
         self._pool = None
@@ -108,7 +108,7 @@ class PgVectorStore:
                     have = (await cur.fetchone())[0]
                     if have != f"vector({self._dim})":
                         raise RAGError(f"chunks.embedding is {have} but EMBEDDING_DIM={self._dim}; "
-                                       "run `python -m app.rag.ingest --reset`")
+                                       "run `python -m app.rag.ingest --reset`", "dimension_mismatch")
                     await c.execute(
                         "CREATE INDEX IF NOT EXISTS chunks_embedding_hnsw "
                         "ON chunks USING hnsw (embedding vector_cosine_ops)"
@@ -123,7 +123,7 @@ class PgVectorStore:
                 last = exc
                 log.warning("pgvector init attempt %d/%d failed: %s", attempt, retries, type(exc).__name__)
                 await asyncio.sleep(delay)
-        raise RAGError("Could not connect to the vector database") from last
+        raise RAGError("Could not connect to the vector database", "database_unreachable") from last
 
     def _p(self):
         if self._pool is None:

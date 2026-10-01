@@ -101,3 +101,44 @@ async def test_reset_recreates_table_after_dimension_change(store):
         assert await other.count() == 0
     finally:
         await other.close()
+
+
+def test_stale_index_with_wrong_dimension_rebuilds_itself_at_startup():
+    """The classic footgun: the table was built for another embedding size (e.g. you switched provider).
+    Startup must rebuild it from data/*.md instead of leaving retrieval switched off."""
+    import psycopg
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    with psycopg.connect(URL, autocommit=True) as c:
+        c.execute("DROP TABLE IF EXISTS chunks")
+        c.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        c.execute("CREATE TABLE chunks (key text PRIMARY KEY, source text, title text, heading text, "
+                  "content text, embedding vector(16), created_at timestamptz DEFAULT now())")
+    s = Settings(llm_provider="fake", vector_store="pgvector", embedding_provider="fake", database_url=URL,
+                 embedding_dim=64, _env_file=None)
+    with TestClient(create_app(s)) as c:
+        rag = c.get("/api/health").json()["rag"]
+        assert rag["enabled"] is True and rag["reason"] is None and rag["chunks"] > 5
+    with psycopg.connect(URL) as c:
+        assert c.execute("SELECT format_type(atttypid, atttypmod) FROM pg_attribute "
+                         "WHERE attrelid='chunks'::regclass AND attname='embedding'").fetchone()[0] == "vector(64)"
+
+
+def test_stale_index_is_not_rebuilt_when_ingest_on_startup_is_off():
+    import psycopg
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    with psycopg.connect(URL, autocommit=True) as c:
+        c.execute("DROP TABLE IF EXISTS chunks")
+        c.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        c.execute("CREATE TABLE chunks (key text PRIMARY KEY, source text, title text, heading text, "
+                  "content text, embedding vector(16), created_at timestamptz DEFAULT now())")
+    s = Settings(llm_provider="fake", vector_store="pgvector", embedding_provider="fake", database_url=URL,
+                 embedding_dim=64, ingest_on_startup=False, _env_file=None)
+    with TestClient(create_app(s)) as c:
+        rag = c.get("/api/health").json()["rag"]
+        assert rag["enabled"] is False and rag["reason"] == "dimension_mismatch"  # explicit opt-out: stay loud

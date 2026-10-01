@@ -358,6 +358,7 @@ const Flow = {
     add('fd-title', `${nd.label} — ${n.status.toUpperCase()}${n.dur != null ? ' — ' + Math.round(n.dur) + ' ms' : ''}`);
     if(n.detail) add('fd-line', n.detail);
     const d = n.data || {};
+    if(d.hint) add('fd-line fd-hint', 'How to fix: ' + d.hint);
     const chunkRow = (c, extra, cls)=>{
       const row = add('fd-row ' + (cls||''), '');
       add('fd-rl', (extra ? extra + ' ' : '') + c.label, row);
@@ -414,8 +415,9 @@ const Flow = {
       }).observe(document.getElementById('win-flow'));
     }
   },
-  open(){
-    openWin('win-flow');
+  /* Called by openWin() for EVERY way the window can be opened: dock, desktop icon, menu, the FLOW button,
+     the `flow` terminal command. (Opening it from the dock used to skip setup and show an empty window.) */
+  afterOpen(){
     if(!this.wired){ this.wired = true; this.wire(); }
     this.build();
     // Show the most recent run in its final state (instantly), so opening the monitor is never an empty box.
@@ -426,6 +428,7 @@ const Flow = {
     }
     this.renderControls(); this._status();
   },
+  open(){ openWin('win-flow'); },          // openWin() calls afterOpen()
 };
 Flow.init();
 function flowOpen(){ Flow.open(); }

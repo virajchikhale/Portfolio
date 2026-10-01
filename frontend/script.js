@@ -474,6 +474,8 @@ function openWin(id){
   // dock dot
   const dk = document.getElementById(WIN_DOCK[id]);
   if(dk) dk.classList.add('running');
+  // The Flow Monitor must be set up however it was opened (dock, menu, icon, button, terminal).
+  if(id==='win-flow' && typeof Flow!=='undefined') Flow.afterOpen();
 }
 
 function closeWin(id){

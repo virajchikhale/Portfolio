@@ -73,6 +73,29 @@ trace inside the error body, so the UI can show where it was stopped.
 API keys or per-IP rate-limit counters. The UI inserts every value with `textContent`, so hostile text is inert. A hidden
 browser tab never delays a chat answer, and closing the monitor releases any held answer immediately.
 
+## Troubleshooting retrieval (RAG)
+Symptoms: the bot says "I don't have details about his experience", answers show no **Sources** line, or the Flow Monitor
+shows EMBED / VECTOR / KEYWORD / FUSE as **skipped**. Check, in this order:
+```bash
+curl localhost:8080/api/health                 # "rag": {"enabled": true, "chunks": 28, "reason": null}
+docker compose logs backend | grep -iE "RAG disabled|Rebuilding|ingest"
+docker compose exec backend python scripts/check_rag.py          # step-by-step diagnosis with the real error
+docker compose exec backend python scripts/check_rag.py --fix    # also rebuilds a stale index
+```
+When retrieval is off, `reason` names the cause and the Flow Monitor shows a "How to fix" line:
+
+| `reason` | Meaning / fix |
+|---|---|
+| `database_url_missing` | `DATABASE_URL` not set (compose sets it); for a local run use `VECTOR_STORE=memory` |
+| `database_unreachable` | Postgres not reachable: `docker compose ps`, `docker compose logs db`; `POSTGRES_PASSWORD` must be letters and digits only |
+| `embedding_model_unavailable` | local model not in the image: `docker compose up -d --build` |
+| `embedding_key_missing` / `embedding_failed` | `EMBEDDING_PROVIDER=gemini` without a working key/model: switch to `local` |
+| `dimension_mismatch` | index built for another embedding size. Rebuilds itself at startup (`INGEST_ON_STARTUP=true`) or run `ingest --reset` |
+
+**Old `.env` files:** if you created `.env` from an early `.env.example`, delete any `EMBEDDING_DIM=`, `EMBEDDING_MODEL=` and
+`RAG_MIN_SCORE=` lines. A stale `RAG_MIN_SCORE=0.35` is too strict for the local model (relevant questions retrieve nothing);
+the app logs a warning when it sees this. A stale `EMBEDDING_DIM` is now ignored for local models.
+
 ## Troubleshooting the LLM
 ```bash
 # local:   cd backend && python scripts/check_llm.py

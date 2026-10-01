@@ -10,8 +10,37 @@ from app.config import Settings
 log = logging.getLogger(__name__)
 
 
+# Machine-readable reasons (exposed in /api/health and the Flow Monitor) with a safe, actionable hint.
+RAG_HINTS = {
+    "database_url_missing":
+        "Set DATABASE_URL (docker compose does this), or use VECTOR_STORE=memory for a local run.",
+    "database_unreachable":
+        "Cannot connect to Postgres: check `docker compose ps`, that POSTGRES_PASSWORD is letters and digits "
+        "only, and `docker compose logs db`.",
+    "dimension_mismatch":
+        "The stored index uses a different embedding size: run `python -m app.rag.ingest --reset` "
+        "(INGEST_ON_STARTUP=true rebuilds it automatically).",
+    "embedding_model_unavailable":
+        "The local embedding model could not be loaded: rebuild with `docker compose up -d --build` so it is "
+        "baked into the image, and check EMBEDDING_MODEL.",
+    "embedding_dim_mismatch":
+        "EMBEDDING_DIM does not match the model's vector size: remove EMBEDDING_DIM from .env.",
+    "embedding_key_missing":
+        "EMBEDDING_PROVIDER=gemini needs GEMINI_API_KEY, or switch to EMBEDDING_PROVIDER=local.",
+    "embedding_failed":
+        "The embedding call failed: check EMBEDDING_MODEL and the key, or switch to EMBEDDING_PROVIDER=local.",
+    "startup_failed":
+        "Unexpected error while starting retrieval: see `docker compose logs backend`.",
+    "unknown": "See `docker compose logs backend`.",
+}
+
+
 class RAGError(Exception):
-    """Retrieval-layer failure. Callers degrade gracefully (answer without sources)."""
+    """Retrieval-layer failure. Callers degrade gracefully (answer without sources). `code` keys RAG_HINTS."""
+
+    def __init__(self, message: str, code: str = "unknown"):
+        super().__init__(message)
+        self.code = code
 
 
 class Embedder(Protocol):
@@ -29,7 +58,7 @@ class GeminiEmbedder:
 
     def __init__(self, settings: Settings):
         if settings.gemini_api_key is None or not settings.gemini_api_key.get_secret_value().strip():
-            raise RAGError("GEMINI_API_KEY is not configured (needed for embeddings)")
+            raise RAGError("GEMINI_API_KEY is not configured (needed for embeddings)", "embedding_key_missing")
         from google import genai
 
         self._types = genai.types
@@ -48,10 +77,11 @@ class GeminiEmbedder:
                 )
             except Exception as exc:
                 log.exception("Gemini embedding call failed (model=%s)", self._s.embedding_model)
-                raise RAGError("Embedding service unavailable") from exc
+                raise RAGError("Embedding service unavailable", "embedding_failed") from exc
             vecs = [list(e.values) for e in res.embeddings]
             if len(vecs) != len(batch) or any(len(v) != self._s.embedding_dim for v in vecs):
-                raise RAGError(f"Embedding size mismatch (expected dim {self._s.embedding_dim})")
+                raise RAGError(f"Embedding size mismatch (expected dim {self._s.embedding_dim})",
+                               "embedding_dim_mismatch")
             # Gemini only returns unit-length vectors at the full 3072 dims; normalise truncated ones.
             out += [_normalize(v) for v in vecs]
         return out
@@ -73,13 +103,15 @@ class LocalEmbedder:
             self._model = TextEmbedding(model_name=settings.embedding_model, cache_dir=settings.embedding_cache_dir)
         except Exception as exc:
             log.exception("Could not load local embedding model %s", settings.embedding_model)
-            raise RAGError(f"Local embedding model '{settings.embedding_model}' could not be loaded "
-                           f"(not cached and no network?)") from exc
+            raise RAGError(
+                f"Local embedding model '{settings.embedding_model}' could not be loaded (not cached and no network?)",
+                "embedding_model_unavailable",
+            ) from exc
         probe = next(iter(self._model.embed(["probe"])))
         if len(probe) != settings.embedding_dim:
             raise RAGError(f"{settings.embedding_model} produces {len(probe)}-dim vectors but "
                            f"EMBEDDING_DIM={settings.embedding_dim}; unset EMBEDDING_DIM or fix it, then "
-                           "run `python -m app.rag.ingest --reset`")
+                           "run `python -m app.rag.ingest --reset`", "embedding_dim_mismatch")
 
     def _run(self, fn, texts: list[str]) -> list[list[float]]:
         return [_normalize([float(x) for x in v]) for v in fn(texts)]

@@ -12,7 +12,7 @@ from app.config import Settings, get_settings
 from app.llm.base import LLMError, Message
 from app.llm.factory import build_llm
 from app.rag.chunker import load_chunks
-from app.rag.embeddings import RAGError, build_embedder
+from app.rag.embeddings import RAG_HINTS, RAGError, build_embedder
 from app.rag.ingest import CORE_FILE, ingest
 from app.rag.lexical import LexicalIndex
 from app.rag.retriever import format_context, retrieve
@@ -49,21 +49,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.rag = None
         app.state.embedder = None
         app.state.lexical = None
+        app.state.rag_reason = None  # None = healthy; else a RAG_HINTS key shown in /api/health and the Flow Monitor
         store = None
         try:
             store = build_store(settings)
             embedder = build_embedder(settings)
-            await store.init()
+            try:
+                await store.init()
+            except RAGError as exc:
+                if exc.code != "dimension_mismatch" or not settings.ingest_on_startup:
+                    raise
+                # The index is derived data (rebuilt from data/*.md), so a size change, e.g. after switching the
+                # embedding model, is safe to fix automatically instead of leaving retrieval switched off.
+                log.warning("Rebuilding the vector index (embedding size changed): %s", exc)
+                await store.init(recreate=True)
             if settings.ingest_on_startup:
                 await ingest(settings, store, embedder)
             app.state.rag, app.state.embedder = store, embedder
             app.state.lexical = LexicalIndex(load_chunks(settings.data_dir, exclude={CORE_FILE}))
-        except RAGError:
-            # Misconfiguration (missing DATABASE_URL, dim mismatch...) must be loud, not silent.
-            log.exception("RAG disabled: configuration error")
+        except RAGError as exc:
+            # Misconfiguration (missing DATABASE_URL, model not loadable...) must be loud, not silent.
+            log.exception("RAG disabled: %s", exc.code)
+            app.state.rag_reason = exc.code
         except Exception:
             # Chat stays up (answers from core facts only) even if the DB / embeddings are down at boot.
             log.exception("RAG disabled: vector store or embeddings unavailable at startup")
+            app.state.rag_reason = "startup_failed"
         try:
             yield
         finally:
@@ -108,7 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "status": "ok",
             "skills": sorted(request.app.state.skills),
             "provider": settings.llm_provider,
-            "rag": {"enabled": rag is not None, "chunks": chunks},
+            "rag": {"enabled": rag is not None, "chunks": chunks, "reason": request.app.state.rag_reason},
         }
 
     @app.post("/api/chat")
@@ -164,9 +175,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     log.exception("retrieval failed; answering from core facts only")
                     tracer.abort_open("retrieval failed; continuing without sources")
             else:
+                reason = request.app.state.rag_reason or "unknown"
                 for stage, label in (("embed", "Embed query"), ("dense", "Vector search"),
                                      ("keyword", "Keyword (BM25)"), ("fuse", "Fuse + gate")):
-                    tracer.skip(stage, label, "retrieval unavailable")
+                    tracer.skip(stage, label, f"retrieval unavailable: {reason}",
+                                {"reason": reason, "hint": RAG_HINTS.get(reason, RAG_HINTS["unknown"])})
             for e in tracer.drain():
                 yield sse({"trace": e})
 

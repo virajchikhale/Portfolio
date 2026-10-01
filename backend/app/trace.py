@@ -41,9 +41,9 @@ class Tracer:
         if self.enabled:
             self.events.append({"id": stage, "phase": "progress", "t": self.now(), "detail": detail})
 
-    def skip(self, stage: str, label: str, detail: str) -> None:
+    def skip(self, stage: str, label: str, detail: str, data: dict | None = None) -> None:
         self.start(stage, label)
-        self.end(stage, "skipped", detail)
+        self.end(stage, "skipped", detail, data)
 
     def abort_open(self, detail: str) -> None:
         """Close any stage still open (an exception interrupted it) so the UI never hangs on a spinner."""

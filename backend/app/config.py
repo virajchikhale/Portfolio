@@ -89,11 +89,24 @@ class Settings(BaseSettings):
         # Changing provider/model changes the vector size: leave both unset to get a consistent pair.
         if self.embedding_model is None:
             self.embedding_model = _DEFAULT_MODEL[self.embedding_provider]
-        if self.embedding_dim is None:
-            self.embedding_dim = (_local_model_dim(self.embedding_model) if self.embedding_provider == "local"
-                                  else _DEFAULT_DIM[self.embedding_provider])
+        if self.embedding_provider == "local":
+            # A local model's vector size is a fact about the model, not a setting. A stale EMBEDDING_DIM left in
+            # .env from an earlier provider (e.g. 768 for Gemini) would otherwise silently switch retrieval off.
+            model_dim = _local_model_dim(self.embedding_model)
+            if self.embedding_dim not in (None, model_dim):
+                log.warning("Ignoring EMBEDDING_DIM=%s: %s produces %d-dim vectors. Remove EMBEDDING_DIM from .env.",
+                            self.embedding_dim, self.embedding_model, model_dim)
+            self.embedding_dim = model_dim
+        elif self.embedding_dim is None:
+            self.embedding_dim = _DEFAULT_DIM[self.embedding_provider]
+        calibrated = _DEFAULT_MIN_SCORE.get(self.embedding_model.lower())
         if self.rag_min_score is None:
-            self.rag_min_score = _DEFAULT_MIN_SCORE.get(self.embedding_model.lower(), _FALLBACK_MIN_SCORE)
+            self.rag_min_score = calibrated if calibrated is not None else _FALLBACK_MIN_SCORE
+        elif calibrated is not None and self.rag_min_score > calibrated + 0.05:
+            log.warning(
+                "RAG_MIN_SCORE=%s is much higher than the calibrated %s for %s: relevant questions may retrieve "
+                "nothing. Remove RAG_MIN_SCORE from .env unless you tuned it.",
+                self.rag_min_score, calibrated, self.embedding_model)
         return self
 
     @field_validator("cors_origins")

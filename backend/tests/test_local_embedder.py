@@ -46,9 +46,18 @@ async def test_semantic_not_just_keyword_matching(embedder):
     assert sims[0] > sims[1]
 
 
-def test_wrong_dim_is_rejected_with_actionable_error():
+def test_stale_embedding_dim_in_env_is_ignored_for_local_models():
+    """A leftover EMBEDDING_DIM=768 (from a Gemini setup) used to silently switch retrieval off."""
+    s = S(embedding_dim=768)
+    assert s.embedding_dim == 384
+    assert LocalEmbedder(s)  # loads fine
+
+
+def test_embedder_still_rejects_a_dimension_that_disagrees_with_the_model():
+    s = S()
+    s.embedding_dim = 768  # bypass the validator to prove the safety net inside the embedder itself
     with pytest.raises(RAGError, match="EMBEDDING_DIM"):
-        LocalEmbedder(S(embedding_dim=768))
+        LocalEmbedder(s)
 
 
 def test_missing_model_is_a_clean_ragerror(tmp_path, monkeypatch):
