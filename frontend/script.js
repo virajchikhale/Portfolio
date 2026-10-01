@@ -453,9 +453,22 @@ function bringFront(id){
   el.classList.add('active');
 }
 
+// Keep the chat and Flow Monitor side by side (never overlapping) on desktop widths.
+function placeChatFlow(){
+  if(window.innerWidth<=768) return;
+  const chat=document.getElementById('win-chat'), flow=document.getElementById('win-flow');
+  const dw=document.getElementById('desktop').clientWidth, gap=12, pad=8;
+  const cw=400, avail=dw-2*pad-gap;
+  const fw=Math.max(380, Math.min(660, avail-cw));
+  const left=Math.max(pad, Math.floor((dw-(cw+gap+fw))/2));
+  chat.style.width=cw+'px'; chat.style.left=left+'px'; chat.style.top='24px';
+  flow.style.width=fw+'px'; flow.style.left=(left+cw+gap)+'px'; flow.style.top='24px';
+}
+
 function openWin(id){
   mbCloseAll();
   const el = document.getElementById(id);
+  if(id==='win-chat' || id==='win-flow') placeChatFlow();
   // remove animation class so we can re-add it
   el.classList.remove('win-open-anim');
   el.style.display = 'flex';
