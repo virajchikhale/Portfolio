@@ -59,6 +59,7 @@
         <div class="dd-row" onclick="openWin('win-skills')">&#9889; Skills</div>
         <div class="dd-row" onclick="openWin('win-projects')">&#128193; Projects</div>
         <div class="dd-row" onclick="chatOpen()">&#10024; VC&middot;AI Chat</div>
+        <div class="dd-row" onclick="flowOpen()">&#9889; Flow Monitor</div>
         <div class="dd-row" onclick="openWin('win-experience')">&#128188; Experience</div>
         <div class="dd-row" onclick="openWin('win-contact')">&#9993; Contact</div>
         <div class="dd-row" onclick="openWin('win-ie')">&#127760; Internet Explorer</div>
@@ -135,6 +136,9 @@
       </div>
       <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="chatOpen()">
         <canvas id="ic6" width="32" height="32"></canvas><span>VC&middot;AI</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="flowOpen()">
+        <canvas id="ic7" width="32" height="32"></canvas><span>Flow</span>
       </div>
     </div>
 
@@ -230,10 +234,39 @@
         </div>
         <div class="chat-input-row">
           <input id="chat-in" type="text" maxlength="800" autocomplete="off" placeholder="Ask a question..." onkeydown="chatKey(event)"/>
+          <button class="mac-btn" id="chat-flow" onclick="flowOpen()" title="Watch how the question is processed">&#9889; FLOW</button>
           <button class="mac-btn inv" id="chat-send" onclick="chatSend()">ASK</button>
         </div>
       </div>
       <div class="mac-rsz" onmousedown="rszDown(event,'win-chat')"></div>
+    </div>
+
+    <!-- ── FLOW MONITOR (animates the backend trace; see flow.js) ── -->
+    <div class="mac-win" id="win-flow" style="width:660px;height:540px;top:24px;left:360px;z-index:22;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-flow')">
+        <div class="tb-btn" onclick="closeWin('win-flow')">&#215;</div>
+        <div class="tb-title">Flow Monitor &mdash; how VC&middot;AI answers</div>
+        <div class="tb-btn" onclick="zoomWin('win-flow')">+</div>
+      </div>
+      <div class="mac-body" style="display:flex;flex-direction:column;overflow:hidden;">
+        <div class="flow-toolbar">
+          <div id="flow-speed" role="group" aria-label="Playback speed">
+            <button type="button" data-mode="live">LIVE</button><button type="button" data-mode="2">2&times;</button><button type="button" data-mode="1">1&times;</button><button type="button" data-mode="0.5">&frac12;&times;</button><button type="button" data-mode="step">STEP</button>
+          </div>
+          <button class="mac-btn" id="flow-next" type="button" disabled>NEXT &#9654;</button>
+          <button class="mac-btn" id="flow-skip" type="button" disabled>SKIP &#9197;</button>
+          <button class="mac-btn" id="flow-replay" type="button" disabled>&#8634; REPLAY</button>
+          <label class="flow-sync"><input type="checkbox" id="flow-sync" checked/> sync answer</label>
+        </div>
+        <div id="flow-mode-hint"></div>
+        <div id="flow-graph"></div>
+        <div id="flow-status"></div>
+        <div class="flow-scroll">
+          <div id="flow-detail"></div>
+          <div id="flow-log" aria-label="Event log"></div>
+        </div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-flow')"></div>
     </div>
 
     <!-- ── EXPERIENCE WINDOW (filled from CONFIG.experience) ── -->
@@ -358,6 +391,10 @@
       <canvas id="dk6" width="36" height="36"></canvas>
       <span class="dk-label">VC&middot;AI</span>
     </div>
+    <div class="dk-item" id="dk-flow" onclick="toggleWin('win-flow')">
+      <canvas id="dk7" width="36" height="36"></canvas>
+      <span class="dk-label">Flow</span>
+    </div>
     <!--
       ADD YOUR APP:
       <div class="dk-sep"></div>
@@ -382,6 +419,7 @@
 
     <script src="config.js"></script>
     <script src="ai.js"></script>
+    <script src="flow.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

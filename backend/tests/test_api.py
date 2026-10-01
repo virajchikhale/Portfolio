@@ -9,7 +9,8 @@ from app.main import create_app
 
 
 def _events(resp):
-    return [ln[6:] for ln in resp.text.splitlines() if ln.startswith("data: ")]
+    """Raw SSE payloads excluding trace events (those are covered in test_trace.py)."""
+    return [ln[6:] for ln in resp.text.splitlines() if ln.startswith("data: ") and not ln.startswith('data: {"trace"')]
 
 
 def test_health_hides_config(client):

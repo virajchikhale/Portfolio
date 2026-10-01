@@ -33,6 +33,12 @@ function aiErrorMessage(status, body){
 async function aiAsk(message, onDelta, onSources){
   if(AI.busy) throw new Error('Still answering the previous question…');
   AI.busy = true;
+  const flow = (typeof Flow !== 'undefined') ? Flow : null;
+  // In slow "teaching" modes the Flow Monitor can hold the answer back until its animation reaches the LLM stage.
+  const gate = flow ? flow.beginRun() : Promise.resolve();
+  let released = false, held = '';
+  gate.then(()=>{ released = true; if(held){ const h = held; held = ''; onDelta(h); } });
+  const emit = chunk=>{ if(released) onDelta(chunk); else held += chunk; };
   const ctrl = new AbortController();
   const timer = setTimeout(()=>ctrl.abort(), AI.TIMEOUT_MS);
   try{
@@ -50,6 +56,8 @@ async function aiAsk(message, onDelta, onSources){
     if(!res.ok){
       let body = null;
       try{ body = await res.json(); }catch(e){}
+      // A blocked request still comes back with its trace, so the monitor can show WHERE it was stopped.
+      if(flow && body && Array.isArray(body.trace)) body.trace.forEach(e=>flow.push(e));
       throw new Error(aiErrorMessage(res.status, body));
     }
 
@@ -69,16 +77,21 @@ async function aiAsk(message, onDelta, onSources){
         if(data === '[DONE]') continue;
         let evt;
         try{ evt = JSON.parse(data); }catch(e){ continue; }
+        if(evt.trace){ if(flow) flow.push(evt.trace); continue; }
         if(evt.error) throw new Error(evt.error);
         if(Array.isArray(evt.sources)){ if(onSources) onSources(evt.sources); continue; }
-        if(evt.delta){ full += evt.delta; onDelta(evt.delta); }
+        if(evt.delta){ full += evt.delta; emit(evt.delta); }
       }
     }
+    if(flow) flow.endRun();
+    await gate;                       // answer text is complete only once the animation has released it
     if(!full.trim()) throw new Error('No answer came back. Please try again.');
     AI.history.push({role:'user', content:message}, {role:'assistant', content:full});
     AI.history = AI.history.slice(-AI.MAX_HISTORY);
     return full;
   }catch(e){
+    if(flow) flow.endRun();
+    try{ await gate; }catch(_){}      // let the animation reach the failure point before the error text appears
     if(e.name === 'AbortError') throw new Error('The answer timed out. Please try again.');
     throw e;
   }finally{

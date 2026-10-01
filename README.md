@@ -50,6 +50,29 @@ Backend only: `cd backend && pip install -r requirements-dev.txt && pytest && uv
 * If retrieval fails (DB/embeddings down) chat keeps working from core facts, without sources; `/api/health` shows `rag.enabled`.
 * Never put private data (phone, address) in `data/`: the public chatbot can quote anything in it.
 
+## Flow Monitor: watch the pipeline run
+Open it from the dock (**Flow**), the Apple menu, the **⚡ FLOW** button in the chat window, or `flow` in the terminal.
+Every question animates as a graph: rate limit → guardrails → embed → vector search ‖ keyword search → fuse + gate → prompt → LLM.
+Click a stage to inspect it (retrieved chunks with score bars and the cut-off tick, matched rare terms, which channel found each
+source; click a chunk to read its text). Blocked requests stop at the stage that blocked them.
+
+| Control | Meaning |
+|---|---|
+| **LIVE** | events shown the moment they arrive, true timing |
+| **2× / 1× / ½×** | teaching speed: each stage stays on screen ~0.5 / 1 / 2 s |
+| **STEP** | one stage per **NEXT ▶** press |
+| **SKIP ⏭** | finish the animation instantly |
+| **↺ REPLAY** | replay the last run at the chosen speed |
+| **sync answer** | in teaching modes, hold the chat answer until the animation reaches the LLM stage |
+
+The speed controls change *playback only*; the real pipeline is never slowed down. The data is real: the backend streams
+one `trace` SSE event (`start`/`end`, real ms timestamps) per stage (`backend/app/trace.py`). A blocked request returns its
+trace inside the error body, so the UI can show where it was stopped.
+
+**What a trace never contains:** the system prompt, guardrail patterns (a block just says "blocked by input guardrail"),
+API keys or per-IP rate-limit counters. The UI inserts every value with `textContent`, so hostile text is inert. A hidden
+browser tab never delays a chat answer, and closing the monitor releases any held answer immediately.
+
 ## Troubleshooting the LLM
 ```bash
 # local:   cd backend && python scripts/check_llm.py

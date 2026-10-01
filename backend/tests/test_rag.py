@@ -108,7 +108,9 @@ class Recorder:
 
 
 def _events(resp):
-    return [json.loads(ln[6:]) for ln in resp.text.splitlines() if ln.startswith("data: {")]
+    """Content events (sources / delta / error); trace events are covered in test_trace.py."""
+    return [e for e in (json.loads(ln[6:]) for ln in resp.text.splitlines() if ln.startswith("data: {"))
+            if "trace" not in e]
 
 
 @pytest.fixture

@@ -1217,3 +1217,81 @@ body[data-theme="dark"] #chat-log::-webkit-scrollbar-track{ background:#111; bor
 
 .chat-sources{font-size:6px;line-height:1.9;color:#777;margin-top:6px;padding-top:5px;border-top:1px dashed #999;word-wrap:break-word;}
 body[data-theme="dark"] .chat-sources{ color:#999; border-top-color:#555; }
+
+/* ── Flow Monitor ────────────────────────────────────── */
+.flow-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;border-bottom:2px solid #000;background:#fff;}
+#flow-speed{display:flex;}
+#flow-speed button{font-family:'Press Start 2P',monospace;font-size:7px;border:2px solid #000;margin-left:-2px;padding:7px 8px;background:#fff;color:#000;cursor:pointer;}
+#flow-speed button:first-child{margin-left:0;}
+#flow-speed button.on{background:#000;color:#fff;}
+.flow-toolbar .mac-btn{padding:6px 8px;}
+.flow-toolbar .mac-btn:disabled{opacity:.4;cursor:default;box-shadow:none;}
+.flow-sync{font-size:6px;display:flex;align-items:center;gap:4px;cursor:pointer;}
+#flow-mode-hint{font-size:6px;color:#666;padding:5px 10px;border-bottom:1px dashed #999;background:#fff;}
+#flow-graph{padding:8px 10px 2px;background:#fff;flex:none;}
+#flow-graph svg{width:100%;height:auto;display:block;max-height:300px;}
+#flow-graph[data-layout="tall"] svg{max-height:440px;}
+#flow-status{font-size:6px;color:#444;padding:2px 10px 6px;border-bottom:2px solid #000;background:#fff;min-height:12px;}
+.flow-scroll{flex:1;min-height:0;overflow-y:auto;background:#fff;}
+
+.fl-box{fill:#fff;stroke:#000;stroke-width:2;}
+.fl-label{font-family:'Press Start 2P',monospace;font-size:8.5px;text-anchor:middle;fill:#000;}
+.fl-sub{font-family:'Press Start 2P',monospace;font-size:6.5px;text-anchor:middle;fill:#666;}
+.fl-mark{font-family:monospace;font-size:11px;font-weight:bold;text-anchor:middle;fill:#000;}
+.fl-node{cursor:pointer;outline:none;}
+.fl-node:focus-visible .fl-box{stroke-dasharray:3 2;}
+.fl-node.sel .fl-box{stroke-width:3.5;}
+.fl-node.active .fl-box{fill:#000;}
+.fl-node.active .fl-label,.fl-node.active .fl-mark{fill:#fff;}
+.fl-node.active .fl-sub{fill:#ccc;}
+.fl-node.active{animation:fl-pulse .9s steps(2,end) infinite;}
+@keyframes fl-pulse{50%{opacity:.78;}}
+.fl-node.ok .fl-box{stroke-width:3;}
+.fl-node.skipped .fl-box{stroke:#999;stroke-dasharray:4 3;}
+.fl-node.skipped .fl-label,.fl-node.skipped .fl-sub,.fl-node.skipped .fl-mark{fill:#999;}
+.fl-node.empty .fl-box{stroke-dasharray:2 3;stroke-width:3;}
+.fl-node.blocked .fl-box,.fl-node.error .fl-box{fill:#e6e6e6;stroke-width:4;}
+.fl-edge{fill:none;stroke:#aaa;stroke-width:2;stroke-dasharray:4 3;}
+.fl-edge.lit{stroke:#000;stroke-dasharray:none;}
+.fl-ah{fill:#555;}
+.fl-packet{fill:#000;stroke:#fff;stroke-width:1.5;}
+
+#flow-detail{padding:8px 10px;font-size:7px;line-height:1.9;}
+.fd-title{font-size:8px;margin-bottom:4px;text-decoration:underline;}
+.fd-line{color:#444;margin:2px 0;}
+.fd-row{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 38px;gap:6px;align-items:center;cursor:pointer;margin:3px 0;padding:2px 0;border-bottom:1px dotted #bbb;}
+.fd-row.fail{opacity:.55;}
+.fd-rl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fd-bar{position:relative;height:6px;border:1px solid #000;background:#fff;}
+.fd-bar i{display:block;height:100%;background:#000;}
+.fd-bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#000;box-shadow:0 0 0 1px #fff;}
+.fd-sc{text-align:right;color:#444;}
+.fd-text{grid-column:1 / -1;white-space:pre-wrap;word-wrap:break-word;color:#333;background:#f3f3f3;border:1px dashed #999;padding:5px 7px;cursor:text;}
+.fd-text[hidden]{display:none;}
+#flow-log{border-top:1px dashed #999;padding:6px 10px;font-family:monospace;font-size:10px;line-height:1.5;color:#555;white-space:pre;overflow-x:auto;max-height:110px;overflow-y:auto;}
+
+body[data-theme="dark"] .flow-toolbar,body[data-theme="dark"] #flow-mode-hint,body[data-theme="dark"] #flow-graph,
+body[data-theme="dark"] #flow-status,body[data-theme="dark"] .flow-scroll{background:#111;border-color:#444;color:#e8e8e8;}
+body[data-theme="dark"] #flow-speed button{background:#1e1e1e;color:#e8e8e8;border-color:#aaa;}
+body[data-theme="dark"] #flow-speed button.on{background:#e8e8e8;color:#111;}
+body[data-theme="dark"] #flow-mode-hint,body[data-theme="dark"] #flow-status{color:#999;}
+body[data-theme="dark"] .fl-box{fill:#1e1e1e;stroke:#e8e8e8;}
+body[data-theme="dark"] .fl-label,body[data-theme="dark"] .fl-mark{fill:#e8e8e8;}
+body[data-theme="dark"] .fl-sub{fill:#999;}
+body[data-theme="dark"] .fl-node.active .fl-box{fill:#e8e8e8;}
+body[data-theme="dark"] .fl-node.active .fl-label,body[data-theme="dark"] .fl-node.active .fl-mark{fill:#111;}
+body[data-theme="dark"] .fl-node.active .fl-sub{fill:#444;}
+body[data-theme="dark"] .fl-node.blocked .fl-box,body[data-theme="dark"] .fl-node.error .fl-box{fill:#3a3a3a;}
+body[data-theme="dark"] .fl-edge{stroke:#555;}
+body[data-theme="dark"] .fl-edge.lit{stroke:#e8e8e8;}
+body[data-theme="dark"] .fl-ah{fill:#aaa;}
+body[data-theme="dark"] .fl-packet{fill:#e8e8e8;stroke:#111;}
+body[data-theme="dark"] .fd-line,body[data-theme="dark"] .fd-sc,body[data-theme="dark"] #flow-log{color:#aaa;}
+body[data-theme="dark"] .fd-bar{background:#111;border-color:#aaa;}
+body[data-theme="dark"] .fd-bar i{background:#e8e8e8;}
+body[data-theme="dark"] .fd-bar b{background:#e8e8e8;box-shadow:0 0 0 1px #111;}
+body[data-theme="dark"] .fd-text{background:#1e1e1e;color:#ccc;border-color:#555;}
+body[data-theme="dark"] .fd-row{border-bottom-color:#444;}
+body[data-theme="dark"] #flow-log{border-top-color:#444;}
+@media (prefers-reduced-motion: reduce){ .fl-node.active{animation:none;} }
+.chat-input-row .mac-btn{padding:7px 8px;}

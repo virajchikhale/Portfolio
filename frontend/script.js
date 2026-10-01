@@ -221,6 +221,18 @@ function drawChat(canvas){
     [0.3,0.5,0.7].forEach(x=>c.fillRect(Math.round(w*x)-1,y,d,d));
   });
 }
+function drawFlow(canvas){
+  px(canvas,(c,w,h)=>{
+    c.fillStyle='#000';
+    const b=Math.round(w*0.26), t=Math.round(h*0.22);
+    // three boxes joined by lines: a tiny pipeline
+    c.fillRect(2,t,b,b); c.fillRect(w-2-b,t,b,b); c.fillRect(Math.round((w-b)/2),h-t-b,b,b);
+    c.fillRect(2+b,t+Math.round(b/2),w-4-2*b,2);
+    c.fillRect(Math.round(w/2)-1,t+Math.round(b/2),2,h-2*t-b-Math.round(b/2)+Math.round(b/2)-2);
+    c.fillStyle='#fff';
+    c.fillRect(2+3,t+3,b-6,b-6); c.fillRect(w-2-b+3,t+3,b-6,b-6);
+  });
+}
 function drawMail(canvas){
   px(canvas,(c,w,h)=>{
     c.fillStyle='#000';
@@ -374,6 +386,7 @@ function initOS(){
   drawMail(document.getElementById('ic4'));
   drawIE(document.getElementById('ic5'));
   drawChat(document.getElementById('ic6'));
+  drawFlow(document.getElementById('ic7'));
   // Dock icons
   drawPerson(document.getElementById('dk0'));
   drawStar(document.getElementById('dk1'));
@@ -382,6 +395,7 @@ function initOS(){
   drawMail(document.getElementById('dk4'));
   drawIE(document.getElementById('dk5'));
   drawChat(document.getElementById('dk6'));
+  drawFlow(document.getElementById('dk7'));
   chatInit();
   // Avatar
   drawAvatar(document.getElementById('av-canvas'));
@@ -429,7 +443,7 @@ let zTop = 30;
 const WIN_DOCK = {
   'win-about':'dk-about','win-skills':'dk-skills',
   'win-projects':'dk-projects','win-terminal':'dk-terminal','win-contact':'dk-contact',
-  'win-ie':'dk-ie','win-chat':'dk-chat'
+  'win-ie':'dk-ie','win-chat':'dk-chat','win-flow':'dk-flow'
 };
 
 function bringFront(id){
@@ -464,6 +478,7 @@ function openWin(id){
 
 function closeWin(id){
   snd('close');
+  if(id==='win-flow' && typeof Flow!=='undefined') Flow.skip();   // never leave the chat answer waiting on a closed monitor
   const el = document.getElementById(id);
   el.style.display = 'none';
   const dk = document.getElementById(WIN_DOCK[id]);
@@ -616,6 +631,7 @@ const CMDS = {
       '<span class="t-out">  projects &mdash; open projects</span>',
       '<span class="t-out">  ask [q]  &mdash; ask VC&middot;AI a question</span>',
       '<span class="t-out">  chat     &mdash; open VC&middot;AI window</span>',
+      '<span class="t-out">  flow     &mdash; watch how answers are made</span>',
       '<span class="t-out">  experience &mdash; work history</span>',
       '<span class="t-out">  resume   &mdash; open resume</span>',
       '<span class="t-out">  lite     &mdash; plain version</span>',
@@ -644,6 +660,7 @@ const CMDS = {
   experience:()=>{ snd('open'); openWin('win-experience'); return `<span class="t-out">Opening Experience...</span>`; },
   resume:   ()=>{ snd('open'); return openResume() ? `<span class="t-out">Opening resume...</span>` : `<span class="t-err">No resume configured yet.</span>`; },
   lite:     ()=>{ snd('open'); setTimeout(()=>{ location.href='lite.html'; },300); return `<span class="t-out">Loading plain version...</span>`; },
+  flow:     ()=>{ snd('open'); flowOpen(); return `<span class="t-out">Opening Flow Monitor...</span>`; },
   chat:     ()=>{ snd('open'); chatOpen(); return `<span class="t-out">Opening VC\u00B7AI...</span>`; },
   ie:       ()=>{ snd('open'); openWin('win-ie'); return `<span class="t-out">Launching Internet Explorer...</span>`; },
   date:     ()=>{ snd('click'); return `<span class="t-out">${new Date().toLocaleString()}</span>`; },
