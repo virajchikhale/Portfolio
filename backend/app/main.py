@@ -1,22 +1,25 @@
 import json
 import logging
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.agent import build_system_prompt, load_core
+from app.agent import build_agent_prompt, build_system_prompt, load_core
+from app.agent.runner import run_agent
+from app.agent.tools import SourceBook, ToolContext, build_tools
+from app.bootstrap import start_rag
 from app.config import Settings, get_settings
 from app.llm.base import LLMError, Message
 from app.llm.factory import build_llm
+from app.mcp_server import build_mcp_server, http_app
 from app.rag.chunker import load_chunks
-from app.rag.embeddings import RAG_HINTS, RAGError, build_embedder
-from app.rag.ingest import CORE_FILE, ingest
-from app.rag.lexical import LexicalIndex
+from app.rag.embeddings import RAG_HINTS
+from app.rag.ingest import CORE_FILE
 from app.rag.retriever import format_context, retrieve
-from app.rag.store import build_store
 from app.security.guardrails import GuardrailViolation, check_input, looks_like_injection, sanitize
 from app.security.rate_limit import RateLimiter, client_ip
 from app.skills_engine.loader import load_skills
@@ -34,10 +37,23 @@ class Turn(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(max_length=4000)  # hard cap before our own (smaller) guardrail
     history: list[Turn] = Field(default_factory=list, max_length=50)
+    mode: Literal["pipeline", "agent"] = "pipeline"  # pipeline = fixed retrieve->answer chain; agent = tool loop
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
+
+    mcp = None
+    mcp_asgi = None
+    if settings.mcp_http_enabled:
+        # Built up front: a mounted sub-app's own lifespan never runs, so OUR lifespan must enter the session manager
+        # (https://py.sdk.modelcontextprotocol.io/run/asgi/).
+        mcp = build_mcp_server(lambda: make_tool_ctx(), lambda: app.state.tools)
+        mcp_asgi = http_app(mcp, settings)
+
+    def make_tool_ctx() -> ToolContext:
+        st = app.state
+        return ToolContext(settings, st.skills, st.chunks, st.rag, st.embedder, st.lexical, SourceBook())
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -46,40 +62,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.skills = load_skills(settings.skills_dir)
         app.state.system_prompt = build_system_prompt(load_core(settings.data_dir), app.state.skills)
         app.state.llm = build_llm(settings)  # fails fast if the key is missing
-        app.state.rag = None
-        app.state.embedder = None
-        app.state.lexical = None
-        app.state.rag_reason = None  # None = healthy; else a RAG_HINTS key shown in /api/health and the Flow Monitor
-        store = None
-        try:
-            store = build_store(settings)
-            embedder = build_embedder(settings)
+        core = load_core(settings.data_dir)
+        app.state.chunks = load_chunks(settings.data_dir, exclude={CORE_FILE})
+        app.state.tools = build_tools(app.state.skills)
+        app.state.agent_prompt = build_agent_prompt(core, app.state.skills, settings.agent_max_tool_calls)
+        rag = await start_rag(settings)
+        app.state.rag, app.state.embedder, app.state.lexical = rag.store, rag.embedder, rag.lexical
+        app.state.rag_reason = rag.reason  # None = healthy; else a RAG_HINTS key shown in /api/health and the monitor
+        async with AsyncExitStack() as stack:
+            if mcp is not None:
+                await stack.enter_async_context(mcp.session_manager.run())
             try:
-                await store.init()
-            except RAGError as exc:
-                if exc.code != "dimension_mismatch" or not settings.ingest_on_startup:
-                    raise
-                # The index is derived data (rebuilt from data/*.md), so a size change, e.g. after switching the
-                # embedding model, is safe to fix automatically instead of leaving retrieval switched off.
-                log.warning("Rebuilding the vector index (embedding size changed): %s", exc)
-                await store.init(recreate=True)
-            if settings.ingest_on_startup:
-                await ingest(settings, store, embedder)
-            app.state.rag, app.state.embedder = store, embedder
-            app.state.lexical = LexicalIndex(load_chunks(settings.data_dir, exclude={CORE_FILE}))
-        except RAGError as exc:
-            # Misconfiguration (missing DATABASE_URL, model not loadable...) must be loud, not silent.
-            log.exception("RAG disabled: %s", exc.code)
-            app.state.rag_reason = exc.code
-        except Exception:
-            # Chat stays up (answers from core facts only) even if the DB / embeddings are down at boot.
-            log.exception("RAG disabled: vector store or embeddings unavailable at startup")
-            app.state.rag_reason = "startup_failed"
-        try:
-            yield
-        finally:
-            if store is not None:
-                await store.close()
+                yield
+            finally:
+                await rag.close()
 
     app = FastAPI(
         title="VC·AI backend",
@@ -162,6 +158,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         def sse(obj) -> str:
             return f"data: {json.dumps(obj)}\n\n"
 
+        # Agent mode costs up to agent_max_steps model calls. If the daily budget cannot absorb that, quietly use
+        # the cheap pipeline instead (and say so in the trace) rather than failing the visitor's question.
+        wanted_agent = body.mode == "agent" and settings.agent_enabled
+        use_agent = wanted_agent and request.app.state.limiter.can_afford(settings.agent_max_steps - 1)
+        note = None
+        if body.mode == "agent" and not use_agent:
+            note = ("agent mode is disabled" if not settings.agent_enabled
+                    else "daily budget low: using the fast pipeline")
+        tracer.meta(mode="agent" if use_agent else "pipeline", requested=body.mode, note=note)
+
+        async def agent_events():
+            for e in tracer.drain():
+                yield sse({"trace": e})
+            tool_ctx = ToolContext(settings, request.app.state.skills, request.app.state.chunks,
+                                   request.app.state.rag, request.app.state.embedder, request.app.state.lexical,
+                                   SourceBook())
+            kwargs = dict(llm=request.app.state.llm, tools=request.app.state.tools, tool_ctx=tool_ctx,
+                          system=request.app.state.agent_prompt, settings=settings)
+            async for item in run_agent(kwargs, history, text, tracer):
+                if "agent_summary" in item:  # internal: charge the extra model calls to the daily budget
+                    request.app.state.limiter.charge(item["agent_summary"]["steps"] - 1)
+                    continue
+                yield sse(item)
+            yield "data: [DONE]\n\n"
+
         async def events():
             for e in tracer.drain():
                 yield sse({"trace": e})
@@ -219,8 +240,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     yield sse({"trace": e})
                 yield sse({"error": str(exc)})
 
-        return StreamingResponse(events(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
+        return StreamingResponse(agent_events() if use_agent else events(), media_type="text/event-stream",
+                                 headers={"X-Accel-Buffering": "no"})
 
+    if mcp_asgi is not None:
+        # Exactly ONE path, not a catch-all mount at "/": a root mount would swallow every route added after it
+        # (e.g. static files in a single-container deployment). The guard is a plain ASGI app, so Route forwards it
+        # untouched and the MCP app sees the original "/mcp" path it is configured for.
+        app.add_route("/mcp", mcp_asgi, include_in_schema=False)
     return app
 
 

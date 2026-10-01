@@ -37,6 +37,11 @@ class Tracer:
         self.events.append({"id": stage, "phase": "end", "t": t, "dur": round(t - began, 1),
                             "status": status, "detail": detail, "data": data or {}})
 
+    def meta(self, **info) -> None:
+        """Run-level facts for the UI (e.g. mode="agent"): the Flow Monitor picks its graph layout from this."""
+        if self.enabled:
+            self.events.append({"id": "meta", "phase": "meta", "t": self.now(), **info})
+
     def progress(self, stage: str, detail: str) -> None:
         if self.enabled:
             self.events.append({"id": stage, "phase": "progress", "t": self.now(), "detail": detail})

@@ -8,6 +8,12 @@ const AI = {
   history: [],      // [{role:'user'|'assistant', content}] — sent back for context
   busy: false,
   online: null,     // null = unknown, true/false after the first health check
+  mode: 'pipeline', // pipeline = fixed retrieve->answer chain (fast, cheap) | agent = tool-calling loop
+  setMode(m){
+    this.mode = m === 'agent' ? 'agent' : 'pipeline';
+    try{ localStorage.setItem('vc-ai-mode', this.mode); }catch(e){}
+    aiRenderMode();
+  },
   MAX_HISTORY: 12,  // server only uses the last few turns anyway
   TIMEOUT_MS: 60000,
 };
@@ -47,7 +53,7 @@ async function aiAsk(message, onDelta, onSources){
       res = await fetch(aiUrl('/api/chat'), {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({message, history: AI.history.slice(-AI.MAX_HISTORY)}),
+        body: JSON.stringify({message, history: AI.history.slice(-AI.MAX_HISTORY), mode: AI.mode}),
         signal: ctrl.signal,
       });
     }catch(e){
@@ -108,6 +114,11 @@ async function aiPing(){
   }catch(e){ AI.online = false; }
   aiRenderStatus();
   return AI.online;
+}
+
+/* Keep every AGENT switch (chat window, Flow Monitor) in step with AI.mode. */
+function aiRenderMode(){
+  ['chat-agent', 'flow-agent'].forEach(id=>{ const el = document.getElementById(id); if(el) el.checked = AI.mode === 'agent'; });
 }
 
 function aiRenderStatus(){
@@ -185,6 +196,10 @@ async function chatSend(preset){
 function chatKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chatSend(); } }
 
 function chatInit(){
+  try{ AI.mode = localStorage.getItem('vc-ai-mode') === 'agent' ? 'agent' : 'pipeline'; }catch(e){}
+  const ag = document.getElementById('chat-agent');
+  if(ag) ag.addEventListener('change', e=>AI.setMode(e.target.checked ? 'agent' : 'pipeline'));
+  aiRenderMode();
   const sugg = document.getElementById('chat-suggest');
   if(sugg){
     sugg.textContent = '';

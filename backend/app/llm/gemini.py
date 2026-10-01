@@ -2,7 +2,16 @@ import logging
 from collections.abc import AsyncIterator
 
 from app.config import Settings
-from app.llm.base import LLMError, Message
+from app.llm.base import (
+    LLMError,
+    Message,
+    ModelTurn,
+    ToolCall,
+    ToolResults,
+    ToolSpec,
+    TranscriptEntry,
+    UserText,
+)
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +48,7 @@ class GeminiClient:
         self._client = genai.Client(api_key=settings.gemini_api_key.get_secret_value().strip())
         self._s = settings
 
-    def _config(self, system: str, with_thinking: bool):
+    def _config(self, system: str, with_thinking: bool, tools: list[ToolSpec] | None = None):
         types = self._genai.types
         kwargs = {
             "system_instruction": system,
@@ -47,8 +56,21 @@ class GeminiClient:
             "temperature": self._s.llm_temperature,
         }
         # Thinking tokens count against max_output_tokens; leaving them on can yield EMPTY answers.
-        if with_thinking and self._s.llm_thinking_budget >= 0:
-            kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=self._s.llm_thinking_budget)
+        if with_thinking:
+            if self._s.llm_thinking_level:  # Gemini 3.x: the level replaces the budget (never send both)
+                kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=self._s.llm_thinking_level.upper())
+            elif self._s.llm_thinking_budget >= 0:
+                kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=self._s.llm_thinking_budget)
+        if tools:
+            # Manual function calling (https://googleapis.github.io/python-genai/): declare the tools, let the model
+            # decide (AUTO), and switch the SDK's automatic execution OFF: our loop runs the tools itself.
+            kwargs["tools"] = [types.Tool(function_declarations=[
+                types.FunctionDeclaration(name=t.name, description=t.description, parameters_json_schema=t.parameters)
+                for t in tools
+            ])]
+            kwargs["tool_config"] = types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(mode="AUTO"))
+            kwargs["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(disable=True)
         return types.GenerateContentConfig(**kwargs)
 
     async def _stream_once(self, system: str, messages: list[Message], with_thinking: bool) -> AsyncIterator[str]:
@@ -85,3 +107,78 @@ class GeminiClient:
         if not emitted:
             log.error("Gemini returned no text (blocked by safety filter or token budget exhausted)")
             raise LLMError("The model returned an empty answer. Try rephrasing your question.")
+
+    # ── agent turns (tool calling) ──────────────────────────────────────────
+    def _to_content(self, entry: TranscriptEntry):
+        types = self._genai.types
+        if isinstance(entry, Message):
+            return types.Content(role="model" if entry.role == "assistant" else "user",
+                                 parts=[types.Part(text=entry.content)])
+        if isinstance(entry, UserText):
+            return types.Content(role="user", parts=[types.Part(text=entry.text)])
+        if isinstance(entry, ModelTurn):
+            if entry.raw is not None:
+                return entry.raw  # replay EXACTLY as received: thought signatures live inside these parts
+            parts = [types.Part(text=entry.text)] if entry.text else []
+            parts += [types.Part(function_call=types.FunctionCall(id=c.id, name=c.name, args=c.args))
+                      for c in entry.tool_calls]
+            return types.Content(role="model", parts=parts)
+        if isinstance(entry, ToolResults):
+            # All results of one model turn go back together in ONE content, in call order. The SDK's own
+            # function-calling loop uses role="user" for this (the API only accepts "user" or "model").
+            return types.Content(role="user", parts=[
+                types.Part(function_response=types.FunctionResponse(
+                    id=r.call.id, name=r.call.name, response=r.response))
+                for r in entry.results
+            ])
+        raise TypeError(f"unknown transcript entry: {type(entry).__name__}")
+
+    async def _turn_once(self, system, transcript, tools, with_thinking):
+        types = self._genai.types
+        contents = [self._to_content(e) for e in transcript]
+        stream = await self._client.aio.models.generate_content_stream(
+            model=self._s.llm_model, contents=contents, config=self._config(system, with_thinking, tools)
+        )
+        parts, calls, text = [], [], ""
+        async for chunk in stream:
+            cand = chunk.candidates[0] if chunk.candidates else None
+            if not (cand and cand.content and cand.content.parts):
+                continue
+            for part in cand.content.parts:
+                parts.append(part)  # keep every part (incl. thought_signature) for exact replay
+                if part.function_call is not None:
+                    fc = part.function_call
+                    calls.append(ToolCall(name=fc.name, args=dict(fc.args or {}), id=fc.id))
+                elif part.text and not part.thought:
+                    text += part.text
+                    yield part.text
+        yield ModelTurn(text=text, tool_calls=calls, raw=types.Content(role="model", parts=parts))
+
+    async def stream_turn(self, system: str, transcript: list[TranscriptEntry], tools: list[ToolSpec]):
+        """Yield text deltas, then one ModelTurn. Retries once without the thinking config if the model rejects it."""
+        emitted = False
+        turn: ModelTurn | None = None
+        try:
+            try:
+                async for item in self._turn_once(system, transcript, tools, with_thinking=True):
+                    emitted = emitted or isinstance(item, str)
+                    if isinstance(item, ModelTurn):
+                        turn = item
+                    else:
+                        yield item
+            except Exception as exc:
+                if emitted or turn is not None or "thinking" not in str(exc).lower():
+                    raise
+                log.warning("Model rejected thinking config, retrying without it: %s", exc)
+                async for item in self._turn_once(system, transcript, tools, with_thinking=False):
+                    if isinstance(item, ModelTurn):
+                        turn = item
+                    else:
+                        yield item
+        except Exception as exc:
+            log.exception("Gemini agent turn failed (model=%s)", self._s.llm_model)
+            raise LLMError(explain_error(exc, self._s)) from exc
+        if turn is None or (not turn.text.strip() and not turn.tool_calls):
+            log.error("Gemini returned neither text nor a tool call (safety filter or token budget exhausted)")
+            raise LLMError("The model returned an empty answer. Try rephrasing your question.")
+        yield turn

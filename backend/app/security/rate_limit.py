@@ -41,6 +41,17 @@ class RateLimiter:
         self._global += 1
 
 
+    def can_afford(self, units: int) -> bool:
+        """True if the global daily budget can absorb `units` MORE model calls (used to gate agent mode)."""
+        self._roll_day()
+        return self._global + units <= self._s.daily_global_request_budget
+
+    def charge(self, units: int) -> None:
+        """Count extra model calls (an agent run makes several; check() already counted the first)."""
+        self._roll_day()
+        self._global += max(0, units)
+
+
 def client_ip(request: Request, settings: Settings) -> str:
     if settings.trust_proxy_headers:
         fwd = request.headers.get("x-forwarded-for")

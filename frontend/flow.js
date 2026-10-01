@@ -43,6 +43,29 @@ const FLOW_LAYOUTS = {
       'fuse>prompt':'M150 294 V306', 'prompt>llm':'M150 350 V362'}},
 };
 const SVGNS = 'http://www.w3.org/2000/svg';
+const TOOL_LABELS = {search_portfolio:'SEARCH', load_skill:'LOAD SKILL', list_projects:'LIST PROJECTS', get_project:'GET PROJECT'};
+
+/* Agent mode draws a chain that GROWS as the model decides: rate limit -> guardrails -> think -> tool -> think ...
+   Wide windows snake across 3 columns; narrow ones stack vertically. */
+function agentLayout(nodes, kind){
+  const pos = {}, paths = {};
+  if(kind === 'tall'){
+    nodes.forEach((n, i)=>{ pos[n.id] = [88, 10 + i*56]; });
+    nodes.forEach((n, i)=>{ if(i){ const a = pos[nodes[i-1].id], b = pos[n.id]; paths[nodes[i-1].id+'>'+n.id] = `M${a[0]+62} ${a[1]+44} V${b[1]}`; } });
+    return {w:300, h:Math.max(416, 10 + nodes.length*56), pos, paths};
+  }
+  const cols = [14, 258, 502];
+  nodes.forEach((n, i)=>{ const r = Math.floor(i/3), c = i % 3; pos[n.id] = [cols[r % 2 === 0 ? c : 2 - c], 14 + r*96]; });
+  nodes.forEach((n, i)=>{
+    if(!i) return;
+    const a = pos[nodes[i-1].id], b = pos[n.id];
+    paths[nodes[i-1].id+'>'+n.id] = a[1] === b[1]
+      ? (b[0] > a[0] ? `M${a[0]+124} ${a[1]+22} H${b[0]}` : `M${a[0]} ${a[1]+22} H${b[0]+124}`)
+      : `M${a[0]+62} ${a[1]+44} V${b[1]}`;
+  });
+  const rows = Math.ceil(nodes.length / 3);
+  return {w:640, h:Math.max(262, 14 + (rows-1)*96 + 44 + 14), pos, paths};
+}
 
 const Flow = {
   mode: 'live',          // live | 2 | 1 | 0.5 | step
@@ -57,6 +80,9 @@ const Flow = {
   skipping: false,
   _more: null, _step: null, _gate: null,
   selected: null,
+  kind: 'pipeline',      // pipeline (fixed 8-stage chain) | agent (growing chain; set by the server's meta event)
+  dyn: [],               // agent mode: [{id, label}] nodes added as steps/tools start
+  _finalStep: null, _started: {},
   layout: 'wide',
   built: false,
   _logLines: [],
@@ -112,6 +138,8 @@ const Flow = {
   },
   push(evt){
     if(!this.cur) this.beginRun();
+    // In agent mode a step is only known to be the FINAL one (the one that streams the answer) when it ends.
+    if(evt.phase === 'end' && /^step_/.test(evt.id) && evt.data && evt.data.final) this._finalStep = evt.id;
     this.cur.events.push(evt);
     this.queue.push(evt);
     this._kick();
@@ -214,13 +242,30 @@ const Flow = {
 
   /* ── applying one event to the model + view ───────────────── */
   _apply(evt, instant){
+    if(evt.phase === 'meta'){
+      // Run-level facts from the server: which graph to draw, and whether agent mode fell back to the pipeline.
+      if(evt.mode === 'agent' && this.kind !== 'agent'){ this.kind = 'agent'; this.dyn = []; if(this.svg) this.build(); }
+      this._note = evt.note || null;
+      this._status();
+      return;
+    }
+    if(this.kind === 'agent' && /^(step|tool)_\d+$/.test(evt.id) && !this.dyn.some(d=>d.id === evt.id)){
+      this.dyn.push({id: evt.id, label: this._dynLabel(evt)});
+      if(this.svg) this.build();
+    }
+    if(evt.phase === 'end' && /^step_/.test(evt.id) && evt.data && evt.data.final){
+      const d = this.dyn.find(x=>x.id === evt.id); if(d) d.label = 'ANSWER';
+    }
     const n = this.nodes[evt.id] || (this.nodes[evt.id] = {status:'idle'});
     if(evt.phase === 'start'){
       n.status = 'active'; n.detail = evt.detail || '';
-      if(evt.id === 'llm') this._openGate();                // the answer may start appearing now
+      this._started[evt.id] = true;
+      if(evt.id === 'llm') this._openGate();                // pipeline: the answer may start appearing now
+      if(evt.id === this._finalStep) this._openGate();      // agent: the FINAL step has been reached
       this._markNode(evt.id, instant);
     }else if(evt.phase === 'end'){
       n.status = evt.status || 'ok'; n.dur = evt.dur; n.detail = evt.detail || n.detail; n.data = evt.data || {};
+      if(this.kind === 'agent' && /^step_/.test(evt.id) && n.data.final && this._started[evt.id]) this._openGate();
       this._markNode(evt.id, instant);
       this._log(evt);
       // Follow the latest stage until the visitor clicks a node; then keep showing the one they picked.
@@ -240,8 +285,23 @@ const Flow = {
     if(msg){ el.textContent = msg; return; }
     const done = this.cur && this.cur.done && !this.queue.length && !this.playing;
     if(!this.cur) el.textContent = 'Ask VC·AI a question (chat window or `ask` in the terminal) to see the flow.';
-    else if(done) el.textContent = 'run complete' + (this._totalMs ? ' · ' + (this._totalMs/1000).toFixed(2) + ' s real time' : '');
+    else if(done) el.textContent = 'run complete' + (this._totalMs ? ' · ' + (this._totalMs/1000).toFixed(2) + ' s real time' : '') + (this._note ? ' · note: ' + this._note : '');
     else el.textContent = 'running…';
+  },
+
+  /* ── graph spec: fixed in pipeline mode, growing in agent mode ───── */
+  nodeList(){
+    if(this.kind !== 'agent') return FLOW_NODES;
+    const base = [{id:'rate_limit', label:'RATE LIMIT'}, {id:'guardrails', label:'GUARDRAILS'}, ...this.dyn];
+    return base.map((n, i)=>({...n, preds: i ? [base[i-1].id] : []}));
+  },
+  labelFor(id){ const n = this.nodeList().find(x=>x.id === id); return n ? n.label : id; },
+  layoutFor(nodes){ return this.kind === 'agent' ? agentLayout(nodes, this.layout) : FLOW_LAYOUTS[this.layout]; },
+  _dynLabel(evt){
+    const m = /^step_(\d+)$/.exec(evt.id);
+    if(m) return 'THINK ' + m[1];
+    const t = /^Tool: (.+)$/.exec(evt.label || '');
+    return t ? (TOOL_LABELS[t[1]] || t[1].replace(/_/g, ' ').toUpperCase().slice(0, 13)) : evt.id.toUpperCase();
   },
 
   /* ── view: graph ──────────────────────────────────────────── */
@@ -249,24 +309,24 @@ const Flow = {
     const host = document.getElementById('flow-graph'); if(!host) return;
     const w = document.getElementById('win-flow').clientWidth || 640;
     this.layout = w < 520 ? 'tall' : 'wide';
-    const L = FLOW_LAYOUTS[this.layout];
+    const nodes = this.nodeList(), L = this.layoutFor(nodes);
     host.textContent = '';
     host.dataset.layout = this.layout;
     const svg = document.createElementNS(SVGNS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${L.w} ${L.h}`);
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', 'Pipeline: rate limit, guardrails, embed, vector and keyword search, fuse, prompt, LLM');
+    svg.setAttribute('aria-label', this.kind === 'agent' ? 'Agent loop: guardrails, then think and tool steps' : 'Pipeline: rate limit, guardrails, embed, vector and keyword search, fuse, prompt, LLM');
     const defs = document.createElementNS(SVGNS, 'defs');
     defs.innerHTML = '<marker id="fl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="fl-ah"/></marker>';
     svg.appendChild(defs);                                   // static literal, no user data
-    FLOW_NODES.forEach(nd=>nd.preds.forEach(p=>{
+    nodes.forEach(nd=>nd.preds.forEach(p=>{
       const path = document.createElementNS(SVGNS, 'path');
       path.setAttribute('d', L.paths[p+'>'+nd.id]);
       path.setAttribute('class', 'fl-edge'); path.setAttribute('marker-end', 'url(#fl-arrow)');
       path.dataset.edge = p+'>'+nd.id;
       svg.appendChild(path);
     }));
-    FLOW_NODES.forEach(nd=>{
+    nodes.forEach(nd=>{
       const [x, y] = L.pos[nd.id];
       const g = document.createElementNS(SVGNS, 'g');
       g.setAttribute('class', 'fl-node idle'); g.dataset.id = nd.id;
@@ -291,6 +351,9 @@ const Flow = {
   },
   _resetVisuals(){
     this.nodes = {}; this._totalMs = 0; this._logLines = []; this.selected = null; this._userPicked = false;
+    this._finalStep = null; this._started = {}; this.dyn = [];
+    const wasAgent = this.kind === 'agent'; this.kind = 'pipeline';
+    if(this.svg && wasAgent) this.build();
     if(this.svg) this.svg.querySelectorAll('.fl-node').forEach(g=>this._markNode(g.dataset.id, true));
     const log = document.getElementById('flow-log'); if(log) log.textContent = '';
     const d = document.getElementById('flow-detail'); if(d) d.textContent = '';
@@ -302,13 +365,15 @@ const Flow = {
     const n = this.nodes[id] || {status:'idle'};
     g.setAttribute('class', 'fl-node ' + n.status + (this.selected === id ? ' sel' : ''));
     const sub = g.querySelector('.fl-sub'), mark = g.querySelector('.fl-mark');
+    const lab = g.querySelector('.fl-label'), want = this.labelFor(id);
+    if(lab.textContent !== want) lab.textContent = want;
     const marks = {ok:'✓', blocked:'✕', error:'!', empty:'∅', skipped:'–', active:'●'};
     mark.textContent = marks[n.status] || '';
-    sub.textContent = n.status === 'active' ? (id === 'llm' && n.ttft ? 'streaming…' : 'working…')
+    sub.textContent = n.status === 'active' ? ((id === 'llm' || /^step_/.test(id)) && n.ttft ? 'streaming…' : 'working…')
                     : n.dur != null ? (n.dur < 1000 ? Math.round(n.dur) + ' ms' : (n.dur/1000).toFixed(1) + ' s')
                     : '';
     // Edges that lead INTO a finished/active node light up.
-    FLOW_NODES.forEach(nd=>nd.preds.forEach(p=>{
+    this.nodeList().forEach(nd=>nd.preds.forEach(p=>{
       const e = this.svg.querySelector(`.fl-edge[data-edge="${p}>${nd.id}"]`);
       const pn = this.nodes[p], cn = this.nodes[nd.id];
       if(e) e.classList.toggle('lit', !!(pn && cn && pn.status !== 'idle' && cn.status !== 'idle'));
@@ -317,7 +382,7 @@ const Flow = {
   _packet(toId, token){
     // A dot travels along each edge into the stage that is about to run.
     if(!this.svg || this.skipping || document.hidden) return Promise.resolve();
-    const nd = FLOW_NODES.find(n=>n.id === toId);
+    const nd = this.nodeList().find(n=>n.id === toId);
     const edges = (nd ? nd.preds : []).filter(p=>this.nodes[p] && this.nodes[p].status !== 'idle')
       .map(p=>this.svg.querySelector(`.fl-edge[data-edge="${p}>${toId}"]`)).filter(Boolean);
     if(!edges.length) return Promise.resolve();
@@ -344,7 +409,7 @@ const Flow = {
   /* ── view: detail panel + log ─────────────────────────────── */
   _log(evt){
     const log = document.getElementById('flow-log'); if(!log) return;
-    const name = (FLOW_NODES.find(n=>n.id === evt.id) || {label: evt.id}).label;
+    const name = this.labelFor(evt.id);
     const line = document.createElement('div');
     line.textContent = `${String(Math.round(evt.t)).padStart(5)} ms  ${name.padEnd(11)} ${evt.status}  ${evt.detail || ''}`;
     log.appendChild(line); log.scrollTop = log.scrollHeight;
@@ -352,19 +417,20 @@ const Flow = {
   renderDetail(id){
     const box = document.getElementById('flow-detail'); if(!box) return;
     const n = this.nodes[id]; box.textContent = '';
-    const nd = FLOW_NODES.find(x=>x.id === id);
+    const label = this.labelFor(id);
     const add = (cls, text, parent)=>{ const e = document.createElement('div'); e.className = cls; e.textContent = text; (parent||box).appendChild(e); return e; };
-    if(!n || n.status === 'idle'){ add('fd-title', (nd ? nd.label : id) + ' — not reached in this run'); return; }
-    add('fd-title', `${nd.label} — ${n.status.toUpperCase()}${n.dur != null ? ' — ' + Math.round(n.dur) + ' ms' : ''}`);
+    if(!n || n.status === 'idle'){ add('fd-title', label + ' — not reached in this run'); return; }
+    add('fd-title', `${label} — ${n.status.toUpperCase()}${n.dur != null ? ' — ' + Math.round(n.dur) + ' ms' : ''}`);
     if(n.detail) add('fd-line', n.detail);
     const d = n.data || {};
     if(d.hint) add('fd-line fd-hint', 'How to fix: ' + d.hint);
-    const chunkRow = (c, extra, cls)=>{
+
+    const chunkRow = (c, extra, cls, threshold)=>{
       const row = add('fd-row ' + (cls||''), '');
       add('fd-rl', (extra ? extra + ' ' : '') + c.label, row);
       if(c.score != null){
         const bar = add('fd-bar', '', row); const fill = document.createElement('i'); fill.style.width = Math.max(2, Math.round(c.score*100)) + '%'; bar.appendChild(fill);
-        if(d.threshold != null){ const tick = document.createElement('b'); tick.style.left = Math.round(d.threshold*100) + '%'; bar.appendChild(tick); }
+        if(threshold != null){ const tick = document.createElement('b'); tick.style.left = Math.round(threshold*100) + '%'; bar.appendChild(tick); }
         add('fd-sc', c.score.toFixed(3), row);
       }
       if(c.text){
@@ -373,20 +439,44 @@ const Flow = {
         row.title = 'click to show the chunk text';
       }
     };
-    if(id === 'dense' && d.candidates){
-      add('fd-line', `cut-off ${d.threshold} (the | tick) — below it a chunk is ignored`);
-      d.candidates.forEach(c=>chunkRow(c, c.passed ? '✓' : '✗', c.passed ? 'pass' : 'fail'));
-    }else if(id === 'keyword'){
-      add('fd-line', d.rare_terms && d.rare_terms.length ? 'rare terms: ' + d.rare_terms.join(', ') : 'no rare corpus terms in the question');
-      (d.hits || []).forEach(c=>chunkRow(c, '→'));
-    }else if(id === 'fuse' && d.results){
-      d.results.forEach(c=>chunkRow(c, '[' + c.n + ']', 'pass'));
-      d.results.forEach(c=>{ add('fd-line', `[${c.n}] found by: ${c.via === 'both' ? 'vector + keyword' : c.via === 'lexical' ? 'keyword' : 'vector'}`); });
-      if(!d.results.length) add('fd-line', 'No source cleared the gates, so the model is told there is none and should say so.');
-    }else if(id === 'embed'){ add('fd-line', `${d.provider} · ${d.model} · ${d.dim} dims`);
-    }else if(id === 'prompt'){ add('fd-line', `${d.sources} source(s), about ${d.approx_tokens} tokens of prompt. (The prompt text itself is never exposed.)`);
-    }else if(id === 'llm'){ add('fd-line', `${d.model || ''} · first token after ${d.ttft_ms != null ? Math.round(d.ttft_ms) + ' ms (run time)' : '—'} · ${d.chunks || 0} chunks · ${d.chars || 0} characters`);
-    }else if(id === 'guardrails' && n.status === 'blocked'){ add('fd-line', 'The question was stopped here. (Which rule matched is never revealed.)');
+    // Retrieval renderers take their data explicitly, so the pipeline's own stages AND the retrieval nested inside an
+    // agent's search tool call share one implementation.
+    const showDense = x=>{
+      add('fd-line', `cut-off ${x.threshold} (the | tick): below it a chunk is ignored`);
+      x.candidates.forEach(c=>chunkRow(c, c.passed ? '✓' : '✗', c.passed ? 'pass' : 'fail', x.threshold));
+    };
+    const showKeyword = x=>{
+      add('fd-line', x.rare_terms && x.rare_terms.length ? 'rare terms: ' + x.rare_terms.join(', ') : 'no rare corpus terms in the question');
+      (x.hits || []).forEach(c=>chunkRow(c, '→'));
+    };
+    const showFuse = x=>{
+      x.results.forEach(c=>chunkRow(c, '[' + c.n + ']', 'pass'));
+      x.results.forEach(c=>{ add('fd-line', `[${c.n}] found by: ${c.via === 'both' ? 'vector + keyword' : c.via === 'lexical' ? 'keyword' : 'vector'}`); });
+      if(!x.results.length) add('fd-line', 'No source cleared the gates, so the model is told there is none and should say so.');
+    };
+
+    if(id === 'dense' && d.candidates) showDense(d);
+    else if(id === 'keyword') showKeyword(d);
+    else if(id === 'fuse' && d.results) showFuse(d);
+    else if(id === 'embed'){ add('fd-line', `${d.provider} · ${d.model} · ${d.dim} dims`); }
+    else if(id === 'prompt'){ add('fd-line', `${d.sources} source(s), about ${d.approx_tokens} tokens of prompt. (The prompt text itself is never exposed.)`); }
+    else if(id === 'llm'){ add('fd-line', `${d.model || ''} · first token after ${d.ttft_ms != null ? Math.round(d.ttft_ms) + ' ms (run time)' : '—'} · ${d.chunks || 0} chunks · ${d.chars || 0} characters`); }
+    else if(id === 'guardrails' && n.status === 'blocked'){ add('fd-line', 'The question was stopped here. (Which rule matched is never revealed.)'); }
+    else if(/^step_\d+$/.test(id)){
+      add('fd-line', d.final ? 'The model answered directly: no tool call this step.' : 'The model decided to call:');
+      (d.calls || []).forEach(c=>add('fd-line', '→ ' + c.name + ' ' + JSON.stringify(c.args)));
+      if(d.text_chars) add('fd-line', d.text_chars + ' characters of text streamed in this step');
+    }else if(/^tool_\d+$/.test(id)){
+      add('fd-line', (d.name || '') + ' ' + JSON.stringify(d.args || {}));
+      if(d.skill) add('fd-line', `loaded skill "${d.skill}": ${d.chars} characters of instructions entered the context now, not up front`);
+      if(d.sources && d.sources.length) add('fd-line', 'sources: ' + d.sources.map(x=>'[' + x.n + '] ' + x.label).join(' · '));
+      const r = d.retrieval;
+      if(r){
+        if(r.dense && r.dense.candidates){ add('fd-sub', 'Vector search inside this tool call'); showDense(r.dense); }
+        if(r.keyword){ add('fd-sub', 'Keyword search inside this tool call'); showKeyword(r.keyword); }
+        if(r.fuse && r.fuse.results){ add('fd-sub', 'Fused result'); showFuse(r.fuse); }
+      }
+      if(d.result){ add('fd-sub', 'What the model received (preview)'); add('fd-text', d.result); }
     }
   },
 
@@ -397,6 +487,7 @@ const Flow = {
     const skip = document.getElementById('flow-skip'); if(skip) skip.disabled = !(this.playing || this._step);
     const rep = document.getElementById('flow-replay'); if(rep) rep.disabled = !this.last;
     const syn = document.getElementById('flow-sync'); if(syn) syn.checked = this.sync;
+    const ag = document.getElementById('flow-agent'); if(ag && typeof AI !== 'undefined') ag.checked = AI.mode === 'agent';
     const hint = document.getElementById('flow-mode-hint');
     if(hint) hint.textContent = this.mode === 'live' ? 'LIVE: shown as it really happens (fast)'
       : this.mode === 'step' ? 'STEP: press NEXT for each stage'
@@ -408,6 +499,8 @@ const Flow = {
     document.getElementById('flow-skip').addEventListener('click', ()=>this.skip());
     document.getElementById('flow-replay').addEventListener('click', ()=>this.replay());
     document.getElementById('flow-sync').addEventListener('change', e=>this.setSync(e.target.checked));
+    const ag = document.getElementById('flow-agent');
+    if(ag) ag.addEventListener('change', e=>{ if(typeof AI !== 'undefined') AI.setMode(e.target.checked ? 'agent' : 'pipeline'); });
     if(window.ResizeObserver){
       new ResizeObserver(()=>{
         const w = document.getElementById('win-flow').clientWidth;
@@ -422,7 +515,8 @@ const Flow = {
     this.build();
     // Show the most recent run in its final state (instantly), so opening the monitor is never an empty box.
     if(this.last && this.queue.length === 0 && !this.playing){
-      this.nodes = {}; this._logLines = [];
+      this.nodes = {}; this._logLines = []; this._finalStep = null; this._started = {}; this.dyn = [];
+      if(this.kind === 'agent'){ this.kind = 'pipeline'; this.build(); }
       const log = document.getElementById('flow-log'); if(log) log.textContent = '';
       this.last.events.forEach(e=>this._apply(e, true));
     }

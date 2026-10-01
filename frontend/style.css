@@ -1297,3 +1297,7 @@ body[data-theme="dark"] #flow-log{border-top-color:#444;}
 .chat-input-row .mac-btn{padding:7px 8px;}
 .fd-hint{color:#000;background:#f3f3f3;border:1px dashed #000;padding:4px 6px;}
 body[data-theme="dark"] .fd-hint{color:#e8e8e8;background:#1e1e1e;border-color:#aaa;}
+
+.fd-sub{font-size:7px;margin:8px 0 3px;text-decoration:underline;}
+.chat-agent{font-size:6px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;}
+.chat-agent input{margin:0;}

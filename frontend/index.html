@@ -234,6 +234,7 @@
         </div>
         <div class="chat-input-row">
           <input id="chat-in" type="text" maxlength="800" autocomplete="off" placeholder="Ask a question..." onkeydown="chatKey(event)"/>
+          <label class="chat-agent" title="Let the model decide which tools to use (slower, more model calls)"><input type="checkbox" id="chat-agent"/> AGENT</label>
           <button class="mac-btn" id="chat-flow" onclick="flowOpen()" title="Watch how the question is processed">&#9889; FLOW</button>
           <button class="mac-btn inv" id="chat-send" onclick="chatSend()">ASK</button>
         </div>
@@ -257,6 +258,7 @@
           <button class="mac-btn" id="flow-skip" type="button" disabled>SKIP &#9197;</button>
           <button class="mac-btn" id="flow-replay" type="button" disabled>&#8634; REPLAY</button>
           <label class="flow-sync"><input type="checkbox" id="flow-sync" checked/> sync answer</label>
+          <label class="flow-sync" title="Let the model decide which tools to call"><input type="checkbox" id="flow-agent"/> agent mode</label>
         </div>
         <div id="flow-mode-hint"></div>
         <div id="flow-graph"></div>

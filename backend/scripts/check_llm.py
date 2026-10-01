@@ -57,7 +57,42 @@ async def main() -> int:
             print(f"    underlying: {type(cause).__name__}: {str(cause)[:400]}")
         rc = 1
 
-    print(f"\n[3] Embedding test with '{s.embedding_model}' (dim {s.embedding_dim}) ...")
+    print(f"\n[3] Tool calling (agent mode) with '{s.llm_model}' ...")
+    try:
+        from app.agent.tools import build_tools
+        from app.llm.base import ToolResult, ToolResults, UserText
+
+        specs = [t.spec for t in build_tools({}).values() if t.spec.name == "list_projects"]
+        client = GeminiClient(s)
+        sys_prompt = ("You can call tools. For questions about projects, call list_projects, "
+                      "then answer in one sentence.")
+        transcript = [UserText("Which projects does Viraj have? Use the tool.")]
+        turn = None
+        async for item in client.stream_turn(sys_prompt, transcript, specs):
+            if not isinstance(item, str):
+                turn = item
+        if not turn or not turn.tool_calls:
+            print("    FAILED: the model did not request the tool (it answered in text instead).")
+            rc = 1
+        else:
+            call = turn.tool_calls[0]
+            print(f"    model asked for: {call.name}({call.args})  [thought signature kept: "
+                  f"{any(getattr(p, 'thought_signature', None) for p in turn.raw.parts)}]")
+            transcript += [turn, ToolResults([ToolResult(call, {"result": "- Demo Project: a made-up example."})])]
+            out = ""
+            async for item in client.stream_turn(sys_prompt, transcript, specs):
+                if isinstance(item, str):
+                    out += item
+            print("    OK, final answer after the tool result:", out.strip()[:120])
+    except Exception as e:
+        print(f"    FAILED: {e}")
+        if e.__cause__:
+            print(f"    underlying: {type(e.__cause__).__name__}: {str(e.__cause__)[:400]}")
+        print("    -> agent mode will not work with this model. Try LLM_THINKING_LEVEL=low (Gemini 3.x) or "
+              "LLM_THINKING_BUDGET=-1, or a different LLM_MODEL. Pipeline mode is unaffected.")
+        rc = 1
+
+    print(f"\n[4] Embedding test with '{s.embedding_model}' (dim {s.embedding_dim}) ...")
     try:
         from app.rag.embeddings import GeminiEmbedder
 

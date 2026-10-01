@@ -7,3 +7,8 @@ google-genai>=1.0,<2
 psycopg[binary,pool]>=3.2,<4
 pgvector>=0.3,<1
 fastembed>=0.5,<1
+langgraph>=1,<2
+mcp>=2.2,<3
+# mcp pulls sse-starlette, whose newer releases need Starlette >=0.49 while FastAPI 0.115 needs <0.47: keep this trio together
+starlette>=0.40,<0.47
+sse-starlette==3.0.3

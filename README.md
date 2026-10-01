@@ -50,6 +50,73 @@ Backend only: `cd backend && pip install -r requirements-dev.txt && pytest && uv
 * If retrieval fails (DB/embeddings down) chat keeps working from core facts, without sources; `/api/health` shows `rag.enabled`.
 * Never put private data (phone, address) in `data/`: the public chatbot can quote anything in it.
 
+## Agent mode: a model that decides what to do
+Tick **AGENT** in the chat window (or the Flow Monitor), or type `agent` in the terminal. Instead of the fixed
+retrieve→answer chain, the model runs a loop (LangGraph, `backend/app/agent/graph.py`) and chooses its own tools:
+
+```mermaid
+graph TD;
+    __start__ --> decide;
+    decide -.-> act;
+    decide -.-> __end__;
+    act --> decide;
+```
+* **decide**: one model call. Text streams to the visitor as it arrives. If the model asks for tools we go to *act*.
+* **act**: runs the requested tools (validated, time-limited, results size-capped) and feeds the results back.
+
+| Tool (all read-only) | What it does |
+|---|---|
+| `search_portfolio(query)` | the hybrid retriever (vector + keyword); returns numbered sources `[1]`, `[2]` |
+| `load_skill(name)` | loads a skill's full instructions **on demand**. The prompt only lists skill names and descriptions (progressive disclosure, the OpenClaw / Agent Skills approach) |
+| `list_projects()` / `get_project(name)` | project overviews and details |
+
+**Why it cannot run away:** `AGENT_MAX_STEPS` (default 4) model calls, `AGENT_MAX_TOOL_CALLS` (6), a per-tool timeout, an
+overall timeout, and loop detection (an identical repeated call is refused). On the last step the model is offered **no
+tools**, so it has to answer. If the browser disconnects the whole run is cancelled. Every function call gets exactly one
+response (Gemini requires it), and extra parallel calls beyond 3 get an error instead of running.
+
+**Cost and fallback:** an agent run makes up to `AGENT_MAX_STEPS` model calls and is charged to the daily budget accordingly.
+If the budget cannot absorb a worst-case run, the question is answered by the fast pipeline instead and the Flow Monitor says
+so. Pipeline mode stays the default.
+
+**Security:** tool arguments are untrusted input (strict type/length/key validation, injection screening, skill names must be
+in the catalog); tool results and user text are labelled as data in the prompt; no tool writes, sends, deletes, fetches a URL
+or reads a secret.
+
+In the **Flow Monitor** the graph grows as the model decides (THINK 1 → LOAD SKILL → THINK 2 → SEARCH → ANSWER). Click a
+tool to see its arguments, what the model received, and the whole retrieval breakdown (vector scores, keyword matches) nested
+inside the call.
+
+**Gemini details** (from the [function-calling docs](https://ai.google.dev/gemini-api/docs/function-calling) and the SDK
+source): tools are declared with `FunctionDeclaration(parameters_json_schema=...)`, automatic function calling is disabled, the
+model's turn is replayed **exactly as received** (Gemini 3.x thought signatures live inside those parts), and function
+responses go back together in one `role="user"` content. `LLM_THINKING_LEVEL` (Gemini 3.x) replaces `LLM_THINKING_BUDGET`.
+
+## MCP server: use the portfolio from any MCP client
+The same four read-only tools, via the official MCP Python SDK v2 (`backend/app/mcp_server.py`). No LLM calls, nothing written.
+
+**Local (stdio)**, e.g. in a client config such as Claude Desktop's `claude_desktop_config.json`:
+```json
+{"mcpServers": {"viraj-portfolio": {
+  "command": "python", "args": ["-m", "app.mcp_server"],
+  "cwd": "/path/to/Portfolio/backend", "env": {"VECTOR_STORE": "memory"}}}}
+```
+**Remote (streamable HTTP)** at `POST /mcp` (stateless, JSON responses):
+```bash
+curl -s localhost:8080/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_portfolio","arguments":{"query":"Inorbvict internship"}}}'
+```
+| Setting | Effect |
+|---|---|
+| `MCP_HTTP_ENABLED=false` | no HTTP endpoint (stdio still works) |
+| `MCP_AUTH_TOKEN=...` | `/mcp` requires `Authorization: Bearer <token>` (constant-time compare) |
+| `MCP_ALLOWED_HOSTS=api.example.com` | required behind a real hostname; other `Host` headers get `421` (DNS-rebinding protection) |
+| `MCP_RATE_LIMIT_PER_MINUTE/DAY` | its own per-IP limits; MCP never touches the LLM budget |
+
+Only `POST` is accepted (a `GET` would open a long-lived stream anyone could hold open), and browser `Origin`s are rejected.
+Tools are annotated `readOnlyHint`. Docs: [MCP Python SDK](https://py.sdk.modelcontextprotocol.io/),
+[mounting in an existing app](https://py.sdk.modelcontextprotocol.io/run/asgi/).
+
 ## Flow Monitor: watch the pipeline run
 Open it from the dock (**Flow**), the Apple menu, the **⚡ FLOW** button in the chat window, or `flow` in the terminal.
 Every question animates as a graph: rate limit → guardrails → embed → vector search ‖ keyword search → fuse + gate → prompt → LLM.
@@ -153,5 +220,5 @@ Pattern guardrails are a speed bump, not a wall — the architectural limits abo
 1. ✅ Scaffold, Gemini provider, guardrails, rate limits, skills loader, Docker, CI
 2. ✅ Terminal `ask` / VC·AI window streaming from `/api/chat` (`frontend/ai.js`; replies rendered with `textContent` only)
 3. ✅ RAG over `backend/data/*.md` (pgvector, HNSW) with inline citations and a sources line in the UI
-4. LangGraph agent: `load_skill` tool, MCP server/client
+4. ✅ Agent mode (LangGraph tool loop, `load_skill`, read-only tools) + MCP server (stdio and HTTP)
 5. Evals (golden Q&A in CI) + trace viewer ("Agent Monitor" window)

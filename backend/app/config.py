@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     # Gemini 'thinking' budget. 0 = off (fast, cheap, no empty answers). -1 = don't send (model default;
     # required for models that cannot disable thinking, e.g. Pro).
     llm_thinking_budget: int = Field(0, ge=-1)
+    # Gemini 3.x replaced the budget with a level (https://ai.google.dev/gemini-api/docs/thinking). When set it is
+    # sent INSTEAD of the budget (the API rejects both together).
+    llm_thinking_level: Literal["minimal", "low", "medium", "high"] | None = None
     llm_temperature: float = Field(0.3, ge=0, le=2)
     llm_timeout_s: float = Field(30, gt=0)
 
@@ -68,6 +71,20 @@ class Settings(BaseSettings):
     ingest_on_startup: bool = True  # embeds only new/changed chunks, so restarts are cheap
     rag_top_k: int = Field(4, ge=1, le=20)
     rag_min_score: float | None = Field(None, ge=0, le=1)  # default per model; tune with scripts/eval_retrieval.py
+
+    # ── Agent mode (tool-calling loop, see app/agent) ────────────────────────
+    agent_enabled: bool = True
+    agent_max_steps: int = Field(4, ge=1, le=10)  # model calls per question (each may request tools)
+    agent_max_tool_calls: int = Field(6, ge=1, le=20)  # tool executions per question
+    agent_tool_timeout_s: float = Field(15, gt=0)
+    agent_timeout_s: float = Field(60, gt=0)  # whole run
+
+    # ── MCP server (see app/mcp_server.py): the same read-only tools for external MCP clients ──────────────
+    mcp_http_enabled: bool = True  # mounts the streamable-HTTP endpoint at /mcp
+    mcp_auth_token: SecretStr | None = None  # when set, /mcp requires "Authorization: Bearer <token>"
+    mcp_rate_limit_per_minute: int = Field(60, ge=1)  # per client IP; a single MCP interaction is several HTTP calls
+    mcp_rate_limit_per_day: int = Field(2000, ge=1)
+    mcp_allowed_hosts: str = ""  # comma-separated Host headers accepted behind a real hostname, e.g. "api.example.com"
 
     # ── Guardrails / abuse protection ───────────────────────────────────────
     max_input_chars: int = Field(800, ge=1)
