@@ -10,6 +10,7 @@ RUN useradd --system --uid 10001 --no-create-home app
 COPY --chown=app:app app ./app
 COPY --chown=app:app skills ./skills
 COPY --chown=app:app data ./data
+COPY --chown=app:app scripts ./scripts
 USER app
 
 EXPOSE 8000

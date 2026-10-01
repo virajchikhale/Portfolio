@@ -12,6 +12,24 @@ docker compose up --build       # http://localhost:8080
 ```
 Backend only: `cd backend && pip install -r requirements-dev.txt && pytest && uvicorn app.main:app --reload`
 
+## Troubleshooting the LLM
+```bash
+# local:   cd backend && python scripts/check_llm.py
+# docker:  docker compose run --rm backend python scripts/check_llm.py
+```
+It prints the real provider error (the API itself only shows a safe message) and lists the models your key can use.
+
+| Symptom in chat | Likely cause / fix |
+|---|---|
+| "Gemini rejected the API key" | Wrong/expired key, or the Generative Language API isn't enabled for it |
+| "Model '…' was not found" | Set `LLM_MODEL` to a name from `check_llm.py`'s list |
+| "quota / rate limit reached" | Free-tier limits; wait or use a billed key |
+| "empty answer" | Safety filter, or thinking ate the token budget: keep `LLM_THINKING_BUDGET=0` (or `-1` for Pro models) |
+| "AI service is temporarily unavailable" | `ENVIRONMENT=prod` hides details by design; read `docker compose logs backend` |
+| Changed `.env` but nothing changed | Containers read env at start: `docker compose up -d --force-recreate backend` |
+
+In `ENVIRONMENT=dev` the chat shows the specific cause; in `prod` visitors only ever see a generic message.
+
 ## Architecture
 ```
 browser ──► nginx (static UI, CSP, rate limit) ──/api──► FastAPI ──► LLM provider (Gemini; swappable by env)
