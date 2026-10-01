@@ -74,18 +74,37 @@ function renderFromConfig(){
   if(projEl){
     const cards = C.projects.map(p=>{
       const tags  = p.tags.map(t=>`<span class="pc-tag">${t}</span>`).join('');
-      const links = (p.links||[]).map(l=>`<span class="pc-link" onclick="ieOpen('${l.url}')">${l.label}</span>`).join('');
+      const allLinks = [].concat(
+        p.repo ? [{label:'\uD83D\uDC08 Code', url:p.repo}] : [],
+        p.demo ? [{label:'\u25B6 Live Demo', url:p.demo}] : [],
+        p.writeup ? [{label:'\uD83D\uDCC4 Write-up', url:p.writeup}] : [],
+        p.links || []
+      );
+      const links = allLinks.map(l=>`<span class="pc-link" onclick="ieOpen('${l.url}')">${l.label}</span>`).join('');
+      const metrics = (p.metrics||[]).map(m=>`<li>${m}</li>`).join('');
       return `
         <div class="pc">
           <div class="pc-head"><span>${p.icon} ${p.name}</span></div>
           <div class="pc-body">
             <p>${p.desc}</p>
+            ${metrics?`<ul style="margin:0 0 6px 12px;padding:0;font-size:7px;line-height:2;">${metrics}</ul>`:''}
             <div class="pc-tags">${tags}</div>
             ${links?`<div class="pc-links">${links}</div>`:''}
           </div>
         </div>`;
     }).join('');
     projEl.innerHTML = cards;
+  }
+
+  /* ── Experience window body (only when CONFIG.experience is filled) ── */
+  const xpEl = document.getElementById('experience-content');
+  if(xpEl){
+    xpEl.innerHTML = (C.experience||[]).map(x=>`
+      <div class="xp-item">
+        <h3>${x.role} &mdash; ${x.company}</h3>
+        <div class="xp-meta">${x.period}${x.location?' \u00b7 '+x.location:''}</div>
+        <ul>${(x.points||[]).map(pt=>`<li>${pt}</li>`).join('')}</ul>
+      </div>`).join('') || '<p style="font-size:7px;color:#777;">Nothing here yet.</p>';
   }
 
   /* ── Contact email ──────────────────────────────────────────── */
@@ -279,34 +298,55 @@ function drawAvatar(canvas){
 const BOOT_MSGS = CONFIG.bootMessages;
 
 function runBoot(){
+  const boot = document.getElementById('boot');
+  let finished = false;
+  const timers = [];
+  const later = (fn, ms)=>{ timers.push(setTimeout(fn, ms)); };
+
+  const finish = (fast)=>{
+    if(finished) return;
+    finished = true;
+    timers.forEach(clearTimeout);
+    try{ localStorage.setItem('vc-os-booted','1'); }catch(e){}
+    boot.style.transition = fast ? 'none' : 'opacity 0.45s';
+    boot.style.opacity = '0';
+    later(()=>{
+      boot.style.display = 'none';
+      document.getElementById('os').classList.add('visible');
+      initOS();
+      if(!fast) setTimeout(()=>snd('boot'), 100);
+    }, fast ? 0 : 460);
+  };
+
+  // Skip: button, Escape/Enter/Space, or ?skipboot. Returning visitors skip automatically.
+  let seen = false;
+  try{ seen = localStorage.getItem('vc-os-booted') === '1'; }catch(e){}
+  const params = new URLSearchParams(location.search);
+  if(seen || params.has('skipboot')){ finish(true); return; }
+
+  const skipBtn = document.getElementById('boot-skip-btn');
+  if(skipBtn) skipBtn.addEventListener('click', e=>{ e.preventDefault(); finish(true); });
+  document.addEventListener('keydown', function onKey(e){
+    if(['Escape','Enter',' '].includes(e.key)){ finish(true); document.removeEventListener('keydown', onKey); }
+  });
+
   drawMac(document.getElementById('boot-canvas'));
   const linesEl = document.getElementById('boot-lines');
   const bar = document.getElementById('boot-bar');
   const total = BOOT_MSGS.length;
 
   BOOT_MSGS.forEach((msg, i) => {
-    setTimeout(()=>{
+    later(()=>{
       const s = document.createElement('span');
       s.className = 'boot-line';
       s.textContent = '> ' + msg;
       linesEl.appendChild(s);
-      // force reflow then show
       requestAnimationFrame(()=>{ s.classList.add('show'); });
       bar.style.width = Math.round((i+1)/total*100) + '%';
     }, 300 + i * 340);
   });
 
-  setTimeout(()=>{
-    const boot = document.getElementById('boot');
-    boot.style.transition = 'opacity 0.45s';
-    boot.style.opacity = '0';
-    setTimeout(()=>{
-      boot.style.display = 'none';
-      document.getElementById('os').classList.add('visible');
-      initOS();
-      setTimeout(()=>snd('boot'), 100);
-    }, 460);
-  }, 300 + BOOT_MSGS.length * 340 + 300);
+  later(()=>finish(false), 300 + BOOT_MSGS.length * 340 + 300);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -559,6 +599,9 @@ const CMDS = {
       '<span class="t-out">  whoami   &mdash; about me</span>',
       '<span class="t-out">  skills   &mdash; tech stack</span>',
       '<span class="t-out">  projects &mdash; open projects</span>',
+      '<span class="t-out">  experience &mdash; work history</span>',
+      '<span class="t-out">  resume   &mdash; open resume</span>',
+      '<span class="t-out">  lite     &mdash; plain version</span>',
       '<span class="t-out">  contact  &mdash; send message</span>',
       '<span class="t-out">  github   &mdash; open GitHub</span>',
       '<span class="t-out">  linkedin &mdash; open LinkedIn</span>',
@@ -576,19 +619,14 @@ const CMDS = {
       '<span class="t-out">  invaders &mdash; space invaders</span>',
     ].join('');
   },
-  whoami:   ()=>{ snd('click'); return `<span class="t-out">Viraj Chikhale &mdash; AI/ML Engineer</span><span class="t-out">India &#127470;&#127475; | Agentic AI &bull; LangChain &bull; LiteLLM &bull; MCP</span>`; },
-  skills:   ()=>{ snd('click'); return [
-    '<span class="t-out" style="text-decoration:underline;">STACK</span>',
-    '<span class="t-out">  AI/ML  : LangChain, LiteLLM, Agentic AI</span>',
-    '<span class="t-out">         : RAG, Fine-tuning, Prompt Eng.</span>',
-    '<span class="t-out">  Agents : MCP Tools, Multi-Agent, AutoGen</span>',
-    '<span class="t-out">  Code   : Python, TypeScript, Bash</span>',
-    '<span class="t-out">  Infra  : Docker, AWS, FastAPI, Linux</span>',
-  ].join(''); },
+  // whoami & skills are defined in renderFromConfig() from CONFIG
   projects: ()=>{ snd('open'); openWin('win-projects'); const projEl=document.getElementById('projects-content'); if(projEl) projEl.scrollTop=0; return `<span class="t-out">Opening Projects...</span>`; },
   contact:  ()=>{ snd('open'); openWin('win-contact');  return `<span class="t-out">Opening Contact...</span>`; },
   github:   ()=>{ snd('open'); ieOpen((CONFIG.links.find(l=>l.label.includes('GitHub'))||{}).url||'https://github.com'); return `<span class="t-out">Opening GitHub in Explorer...</span>`; },
   linkedin: ()=>{ snd('open'); ieOpen((CONFIG.links.find(l=>l.label.includes('LinkedIn'))||{}).url||'https://linkedin.com'); return `<span class="t-out">Opening LinkedIn in Explorer...</span>`; },
+  experience:()=>{ snd('open'); openWin('win-experience'); return `<span class="t-out">Opening Experience...</span>`; },
+  resume:   ()=>{ snd('open'); return openResume() ? `<span class="t-out">Opening resume...</span>` : `<span class="t-err">No resume configured yet.</span>`; },
+  lite:     ()=>{ snd('open'); setTimeout(()=>{ location.href='lite.html'; },300); return `<span class="t-out">Loading plain version...</span>`; },
   ie:       ()=>{ snd('open'); openWin('win-ie'); return `<span class="t-out">Launching Internet Explorer...</span>`; },
   date:     ()=>{ snd('click'); return `<span class="t-out">${new Date().toLocaleString()}</span>`; },
   matrix:   ()=>{ snd('chime'); startMatrixEgg(); return `<span class="t-out">INITIATING NEURAL MATRIX...</span>`; },
@@ -661,6 +699,13 @@ function setTheme(mode){
 /* ══════════════════════════════════════════════════════
    CONTACT SEND
 ══════════════════════════════════════════════════════ */
+function openResume(){
+  const url = CONFIG.resumeUrl;
+  if(!url){ showAlert('Resume coming soon.'); return false; }
+  window.open(url, '_blank', 'noopener');
+  return true;
+}
+
 function handleSend(){
   const fromEl = document.querySelector('#win-contact input[type="email"]');
   const subjEl = document.querySelector('#win-contact input[type="text"]:not([readonly])');
@@ -672,12 +717,33 @@ function handleSend(){
     showAlert('Please fill in all fields\nbefore sending.');
     return;
   }
-  // Build mailto link for actual email delivery
-  const mailto = `mailto:${CONFIG.user.email}?subject=${encodeURIComponent(subjEl.value.trim())}&body=${encodeURIComponent('From: '+fromEl.value.trim()+'\n\n'+msgEl.value.trim())}`;
-  window.location.href = mailto;
-  btn.textContent = '✓ SENT!';
+  const from = fromEl.value.trim(), subject = subjEl.value.trim(), message = msgEl.value.trim();
+  const reset = ()=>{ btn.textContent='SEND'; btn.disabled=false; fromEl.value=''; subjEl.value=''; msgEl.value=''; };
+
+  const viaMailto = ()=>{
+    window.location.href = `mailto:${CONFIG.user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('From: '+from+'\n\n'+message)}`;
+    btn.textContent = 'OPENING MAIL...';
+    setTimeout(reset, 3000);
+  };
+
+  // No form endpoint configured -> fall back to the visitor's mail client.
+  if(!CONFIG.contactEndpoint){ btn.disabled = true; viaMailto(); return; }
+
   btn.disabled = true;
-  setTimeout(()=>{ btn.textContent='SEND'; btn.disabled=false; fromEl.value=''; subjEl.value=''; msgEl.value=''; }, 3000);
+  btn.textContent = 'SENDING...';
+  fetch(CONFIG.contactEndpoint, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({ email: from, subject, message }),
+  }).then(r=>{
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    btn.textContent = '\u2713 SENT!';
+    setTimeout(reset, 3000);
+  }).catch(()=>{
+    snd('alert');
+    showAlert('Could not send the message.\nOpening your mail app instead.');
+    viaMailto();
+  });
 }
 
 /* ══════════════════════════════════════════════════════
@@ -885,7 +951,7 @@ function ieRenderHome(){
 /* ── OG Meta Fetcher via CORS proxy ─────────────── */
 async function ieFetchOG(url){
   // allorigins returns {contents: '<html>...'} — free CORS proxy
-  const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+  const proxy = (CONFIG.proxyUrl || 'https://api.allorigins.win/get?url=') + encodeURIComponent(url);
   const res = await fetch(proxy, {signal: AbortSignal.timeout(8000)});
   if(!res.ok) throw new Error('proxy error');
   const json = await res.json();

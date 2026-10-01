@@ -27,6 +27,21 @@ const CONFIG = {
     promptUser: 'viraj',
   },
 
+  /* ── Optional integrations (all work on static hosting) ──────
+     resumeUrl       : e.g. 'assets/Viraj_Chikhale_Resume.pdf' (put the PDF in the repo)
+     contactEndpoint : e.g. a Formspree / Web3Forms URL. Empty = fall back to mailto:
+     proxyUrl        : CORS proxy used by the IE window, e.g. your own Cloudflare Worker URL + '?url='
+  ─────────────────────────────────────────────────────────── */
+  resumeUrl: '',
+  contactEndpoint: '',
+  proxyUrl: '',
+
+  /* ── Experience (window is empty until you fill this in) ──────
+     { role:'AI Engineer', company:'Company', period:'2023 \u2013 Present', location:'Pune',
+       points:['Built X that did Y (metric)', '...'] }
+  ─────────────────────────────────────────────────────────── */
+  experience: [],
+
   /* ── Stats shown in About window ─────────────────────────── */
   stats: [
     { value: '2+', label: 'YRS EXP' },
@@ -70,7 +85,14 @@ const CONFIG = {
     },
   ],
 
-  /* ── Projects ────────────────────────────────────────────── */
+  /* ── Projects ──────────────────────────────────────────────
+     Per-project optional fields (shown automatically when set):
+       repo    : direct link to the repository (NOT your profile page)
+       demo    : live demo / video URL
+       writeup : case study / blog post URL
+       metrics : ['Recall@5: 0.82 on <dataset> (baseline 0.64)', ...]
+     The old `links` array still works.
+  ─────────────────────────────────────────────────────────── */
   projects: [
     {
       icon: '\uD83E\uDD16',

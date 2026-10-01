@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title id="page-title">VC·OS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="page-title">Viraj Chikhale — AI/ML Engineer | VC·OS</title>
+<meta name="description" content="Viraj Chikhale — AI/ML Engineer building agentic AI: multi-agent orchestration, RAG and full-stack applications. Interactive Mac OS 1984-style portfolio."/>
+<meta name="author" content="Viraj Chikhale"/>
+<link rel="alternate" type="text/html" href="lite.html" title="Plain version"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Viraj Chikhale — AI/ML Engineer"/>
+<meta property="og:description" content="Building agentic AI: multi-agent orchestration, RAG and full-stack apps. Explore the portfolio as a retro desktop OS."/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Viraj Chikhale — AI/ML Engineer"/>
+<meta name="twitter:description" content="Building agentic AI: multi-agent orchestration, RAG and full-stack apps."/>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,6 +22,9 @@
      BOOT SCREEN
 ══════════════════════════════════════════ -->
 <div id="boot">
+  <noscript>
+    <p style="padding:24px;font-family:monospace">JavaScript is required for the interactive desktop. <a href="lite.html">View the plain version</a>.</p>
+  </noscript>
   <div id="boot-screen">
     <div class="boot-titlebar" id="boot-title-bar">VC·OS SYSTEM STARTUP v1.0</div>
     <div class="boot-body">
@@ -24,6 +36,9 @@
         <div class="boot-progress-bar" id="boot-bar"></div>
       </div>
       <div class="boot-ver" id="boot-ver-line"></div>
+      <div class="boot-skip">
+        <a href="#" id="boot-skip-btn">SKIP &#9654;</a> &middot; <a href="lite.html">PLAIN VERSION</a>
+      </div>
     </div>
   </div>
 </div>
@@ -43,8 +58,11 @@
         <div class="dd-row" onclick="openWin('win-about')">&#128100; About Me</div>
         <div class="dd-row" onclick="openWin('win-skills')">&#9889; Skills</div>
         <div class="dd-row" onclick="openWin('win-projects')">&#128193; Projects</div>
+        <div class="dd-row" onclick="openWin('win-experience')">&#128188; Experience</div>
         <div class="dd-row" onclick="openWin('win-contact')">&#9993; Contact</div>
         <div class="dd-row" onclick="openWin('win-ie')">&#127760; Internet Explorer</div>
+        <div class="dd-row" onclick="openResume()">&#128196; Resume</div>
+        <div class="dd-row" onclick="location.href='lite.html'">&#128221; Plain Version</div>
         <div class="dd-hr"></div>
         <div class="dd-row" onclick="location.reload()">&#8635; Restart</div>
       </div>
@@ -191,6 +209,19 @@
         </div>
       </div>
       <div class="mac-rsz" onmousedown="rszDown(event,'win-terminal')"></div>
+    </div>
+
+    <!-- ── EXPERIENCE WINDOW (filled from CONFIG.experience) ── -->
+    <div class="mac-win" id="win-experience" style="width:420px;top:50px;left:160px;z-index:16;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-experience')">
+        <div class="tb-btn" onclick="closeWin('win-experience')">&#215;</div>
+        <div class="tb-title">Experience</div>
+        <div class="tb-btn" onclick="zoomWin('win-experience')">+</div>
+      </div>
+      <div class="mac-body">
+        <div class="wc" id="experience-content"></div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-experience')"></div>
     </div>
 
     <!-- ── CONTACT WINDOW ── -->

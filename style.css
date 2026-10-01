@@ -67,6 +67,13 @@ body{
   transition:width 0.2s linear;
 }
 .boot-ver{font-size:6px;color:#666;text-align:center;}
+.boot-skip{font-size:6px;text-align:center;margin-top:8px;color:#666;}
+.boot-skip a{color:inherit;text-decoration:underline;cursor:pointer;}
+.boot-skip a:hover{color:#000;}
+.xp-item{margin-bottom:12px;}
+.xp-item h3{font-size:8px;margin-bottom:3px;}
+.xp-meta{font-size:6px;color:#777;margin-bottom:5px;}
+.xp-item ul{margin:0 0 0 12px;padding:0;font-size:7px;line-height:2;}
 
 /* ══════════════════════════════════════════════
    OS SHELL
