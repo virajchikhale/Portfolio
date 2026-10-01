@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    env_file: .env            # GEMINI_API_KEY etc. — never baked into the image
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # not published to the host: reachable only through the frontend proxy
+    expose: ["8000"]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    ports: ["8080:8080"]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
