@@ -31,7 +31,7 @@ Add a provider by implementing `LLMClient` in `backend/app/llm/` and registering
 | Key leakage | Server-side env only; `SecretStr`; `.env` git-ignored; gitleaks in CI; errors never echo provider details |
 | Cost abuse | Per-IP/minute + per-IP/day limits, **global daily request budget**, output-token cap, input-length cap, nginx `limit_req` |
 | Prompt injection | Pattern guardrails on user *and* client-supplied history; system prompt treats input as data; model has no mutating tools or secrets to steal |
-| XSS via model output | Frontend must render replies as text (`textContent`), never HTML |
+| XSS via model output | `ai.js` inserts replies with `textContent` only, never HTML (verified with an `<img onerror>` payload) |
 | Spoofed client IP | `X-Forwarded-For` honoured only when `TRUST_PROXY_HEADERS=true`; nginx overwrites it |
 | Container escape / supply chain | Non-root, read-only FS, `cap_drop: ALL`, `no-new-privileges`, pinned deps, `pip-audit` in CI |
 | Info disclosure | `/docs` & OpenAPI off in `prod`; `/api/health` exposes no config |
@@ -46,7 +46,7 @@ Pattern guardrails are a speed bump, not a wall — the architectural limits abo
 
 ## Roadmap
 1. ✅ Scaffold, Gemini provider, guardrails, rate limits, skills loader, Docker, CI
-2. Terminal `ask` / VC·AI window streaming from `/api/chat`
+2. ✅ Terminal `ask` / VC·AI window streaming from `/api/chat` (`frontend/ai.js`; replies rendered with `textContent` only)
 3. RAG over longer content (pgvector) + citations
 4. LangGraph agent: `load_skill` tool, MCP server/client
 5. Evals (golden Q&A in CI) + trace viewer ("Agent Monitor" window)

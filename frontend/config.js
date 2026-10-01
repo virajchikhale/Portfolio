@@ -33,6 +33,16 @@ const CONFIG = {
      proxyUrl        : CORS proxy used by the IE window, e.g. your own Cloudflare Worker URL + '?url='
   ─────────────────────────────────────────────────────────── */
   resumeUrl: '',
+  /* Backend for VC\u00B7AI chat. '' = same origin (Docker/nginx proxies /api).
+     On a static host (GitHub Pages) set the full URL of your deployed API, e.g. 'https://api.example.com'.
+     If unreachable, the chat degrades to an "offline" message. */
+  apiBase: '',
+  chatSuggestions: [
+    'What projects has Viraj built?',
+    'What is his tech stack?',
+    'Tell me about the agentic AI project',
+    'How can I contact him?',
+  ],
   contactEndpoint: '',
   proxyUrl: '',
 

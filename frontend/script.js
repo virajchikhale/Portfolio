@@ -209,6 +209,18 @@ function drawTerm(canvas){
     c.fillText('>_',Math.round(w*0.12),Math.round(h*0.62));
   });
 }
+function drawChat(canvas){
+  px(canvas,(c,w,h)=>{
+    c.fillStyle='#000';c.fillRect(2,3,w-4,h-12);
+    c.fillStyle='#fff';c.fillRect(4,5,w-8,h-16);
+    c.fillStyle='#000';
+    // tail
+    c.fillRect(Math.round(w*0.25),h-9,4,4);c.fillRect(Math.round(w*0.25)-2,h-6,4,3);
+    // three dots
+    const y=Math.round(h*0.4), d=Math.max(2,Math.round(w*0.08));
+    [0.3,0.5,0.7].forEach(x=>c.fillRect(Math.round(w*x)-1,y,d,d));
+  });
+}
 function drawMail(canvas){
   px(canvas,(c,w,h)=>{
     c.fillStyle='#000';
@@ -361,6 +373,7 @@ function initOS(){
   drawTerm(document.getElementById('ic3'));
   drawMail(document.getElementById('ic4'));
   drawIE(document.getElementById('ic5'));
+  drawChat(document.getElementById('ic6'));
   // Dock icons
   drawPerson(document.getElementById('dk0'));
   drawStar(document.getElementById('dk1'));
@@ -368,6 +381,8 @@ function initOS(){
   drawTerm(document.getElementById('dk3'));
   drawMail(document.getElementById('dk4'));
   drawIE(document.getElementById('dk5'));
+  drawChat(document.getElementById('dk6'));
+  chatInit();
   // Avatar
   drawAvatar(document.getElementById('av-canvas'));
   // Clock
@@ -414,7 +429,7 @@ let zTop = 30;
 const WIN_DOCK = {
   'win-about':'dk-about','win-skills':'dk-skills',
   'win-projects':'dk-projects','win-terminal':'dk-terminal','win-contact':'dk-contact',
-  'win-ie':'dk-ie'
+  'win-ie':'dk-ie','win-chat':'dk-chat'
 };
 
 function bringFront(id){
@@ -599,6 +614,8 @@ const CMDS = {
       '<span class="t-out">  whoami   &mdash; about me</span>',
       '<span class="t-out">  skills   &mdash; tech stack</span>',
       '<span class="t-out">  projects &mdash; open projects</span>',
+      '<span class="t-out">  ask [q]  &mdash; ask VC&middot;AI a question</span>',
+      '<span class="t-out">  chat     &mdash; open VC&middot;AI window</span>',
       '<span class="t-out">  experience &mdash; work history</span>',
       '<span class="t-out">  resume   &mdash; open resume</span>',
       '<span class="t-out">  lite     &mdash; plain version</span>',
@@ -627,6 +644,7 @@ const CMDS = {
   experience:()=>{ snd('open'); openWin('win-experience'); return `<span class="t-out">Opening Experience...</span>`; },
   resume:   ()=>{ snd('open'); return openResume() ? `<span class="t-out">Opening resume...</span>` : `<span class="t-err">No resume configured yet.</span>`; },
   lite:     ()=>{ snd('open'); setTimeout(()=>{ location.href='lite.html'; },300); return `<span class="t-out">Loading plain version...</span>`; },
+  chat:     ()=>{ snd('open'); chatOpen(); return `<span class="t-out">Opening VC\u00B7AI...</span>`; },
   ie:       ()=>{ snd('open'); openWin('win-ie'); return `<span class="t-out">Launching Internet Explorer...</span>`; },
   date:     ()=>{ snd('click'); return `<span class="t-out">${new Date().toLocaleString()}</span>`; },
   matrix:   ()=>{ snd('chime'); startMatrixEgg(); return `<span class="t-out">INITIATING NEURAL MATRIX...</span>`; },
@@ -658,6 +676,10 @@ function termKey(e){
     const url = parts.slice(1).join(' ').trim();
     if(!url){ res = `<span class="t-err">Usage: open [url]</span>`; }
     else { ieOpen(url); res = `<span class="t-out">Opening ${url} in Internet Explorer...</span>`; }
+  } else if(cmd === 'ask'){
+    const q = parts.slice(1).join(' ').trim();
+    if(!q){ res = `<span class="t-err">Usage: ask [question]  e.g. ask what projects has Viraj built?</span>`; }
+    else { askInTerminal(q, window._TERM_PROMPT||'$'); return; }
   } else if(CMDS[cmd]){
     res = CMDS[cmd]();
   } else {

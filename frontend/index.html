@@ -58,6 +58,7 @@
         <div class="dd-row" onclick="openWin('win-about')">&#128100; About Me</div>
         <div class="dd-row" onclick="openWin('win-skills')">&#9889; Skills</div>
         <div class="dd-row" onclick="openWin('win-projects')">&#128193; Projects</div>
+        <div class="dd-row" onclick="chatOpen()">&#10024; VC&middot;AI Chat</div>
         <div class="dd-row" onclick="openWin('win-experience')">&#128188; Experience</div>
         <div class="dd-row" onclick="openWin('win-contact')">&#9993; Contact</div>
         <div class="dd-row" onclick="openWin('win-ie')">&#127760; Internet Explorer</div>
@@ -131,6 +132,9 @@
       </div>
       <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="openWin('win-ie')">
         <canvas id="ic5" width="32" height="32"></canvas><span>Internet Explorer</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="chatOpen()">
+        <canvas id="ic6" width="32" height="32"></canvas><span>VC&middot;AI</span>
       </div>
     </div>
 
@@ -209,6 +213,27 @@
         </div>
       </div>
       <div class="mac-rsz" onmousedown="rszDown(event,'win-terminal')"></div>
+    </div>
+
+    <!-- ── VC·AI CHAT WINDOW (streams from /api/chat) ── -->
+    <div class="mac-win" id="win-chat" style="width:400px;height:420px;top:40px;left:120px;z-index:21;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-chat')">
+        <div class="tb-btn" onclick="closeWin('win-chat')">&#215;</div>
+        <div class="tb-title">VC&middot;AI &mdash; Ask about Viraj</div>
+        <div class="tb-btn" onclick="zoomWin('win-chat')">+</div>
+      </div>
+      <div class="mac-body" style="display:flex;flex-direction:column;overflow:hidden;">
+        <div id="chat-log" aria-live="polite">
+          <div class="chat-msg ai"><div class="chat-who">VC&middot;AI <span id="chat-status"></span></div>
+            <div class="chat-text">Hi! Ask me anything about Viraj&rsquo;s skills, projects or experience.</div></div>
+          <div id="chat-suggest"></div>
+        </div>
+        <div class="chat-input-row">
+          <input id="chat-in" type="text" maxlength="800" autocomplete="off" placeholder="Ask a question..." onkeydown="chatKey(event)"/>
+          <button class="mac-btn inv" id="chat-send" onclick="chatSend()">ASK</button>
+        </div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-chat')"></div>
     </div>
 
     <!-- ── EXPERIENCE WINDOW (filled from CONFIG.experience) ── -->
@@ -328,6 +353,11 @@
       <canvas id="dk5" width="36" height="36"></canvas>
       <span class="dk-label">Explorer</span>
     </div>
+    <div class="dk-sep"></div>
+    <div class="dk-item" id="dk-chat" onclick="toggleWin('win-chat')">
+      <canvas id="dk6" width="36" height="36"></canvas>
+      <span class="dk-label">VC&middot;AI</span>
+    </div>
     <!--
       ADD YOUR APP:
       <div class="dk-sep"></div>
@@ -351,6 +381,7 @@
 </div>
 
     <script src="config.js"></script>
+    <script src="ai.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
