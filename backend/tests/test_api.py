@@ -43,7 +43,7 @@ def test_rate_limit(client):
 
 
 def test_global_budget():
-    s = Settings(llm_provider="fake", _env_file=None, daily_global_request_budget=1)
+    s = Settings(llm_provider="fake", vector_store="memory", embedding_provider="fake", _env_file=None, daily_global_request_budget=1)
     with TestClient(create_app(s)) as c:
         assert c.post("/api/chat", json={"message": "hi"}).status_code == 200
         assert c.post("/api/chat", json={"message": "hi"}).status_code == 503
@@ -55,7 +55,7 @@ def test_history_cannot_smuggle_injection(client):
 
 
 def test_cors_only_allowlisted():
-    s = Settings(llm_provider="fake", _env_file=None, cors_origins="https://me.github.io")
+    s = Settings(llm_provider="fake", vector_store="memory", embedding_provider="fake", _env_file=None, cors_origins="https://me.github.io")
     with TestClient(create_app(s)) as c:
         ok = c.get("/api/health", headers={"Origin": "https://me.github.io"})
         bad = c.get("/api/health", headers={"Origin": "https://evil.example"})
@@ -64,7 +64,7 @@ def test_cors_only_allowlisted():
 
 
 def test_missing_key_fails_fast():
-    s = Settings(llm_provider="gemini", gemini_api_key=None, _env_file=None)
+    s = Settings(llm_provider="gemini", gemini_api_key=None, vector_store="memory", embedding_provider="fake", _env_file=None)
     with pytest.raises(LLMError):
         with TestClient(create_app(s)):
             pass

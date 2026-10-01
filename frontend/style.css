@@ -1214,3 +1214,6 @@ body[data-theme="dark"] .chat-chip{ background:#1e1e1e; color:#e8e8e8; border-co
 body[data-theme="dark"] .chat-chip:hover{ background:#e8e8e8; color:#111; }
 body[data-theme="dark"] .chat-input-row input{ background:#1e1e1e; color:#e8e8e8; border-color:#aaa; }
 body[data-theme="dark"] #chat-log::-webkit-scrollbar-track{ background:#111; border-left-color:#333; }
+
+.chat-sources{font-size:6px;line-height:1.9;color:#777;margin-top:6px;padding-top:5px;border-top:1px dashed #999;word-wrap:break-word;}
+body[data-theme="dark"] .chat-sources{ color:#999; border-top-color:#555; }

@@ -5,6 +5,16 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
+# Local embedding model is baked in at build time: the container runs read-only and offline-capable.
+# Build args mirror the runtime env so the cached model is the one that will be loaded.
+ARG EMBEDDING_PROVIDER=local
+ARG EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+ENV EMBEDDING_CACHE_DIR=/srv/models HF_HUB_OFFLINE=1 EMBEDDING_MODEL=${EMBEDDING_MODEL}
+RUN if [ "$EMBEDDING_PROVIDER" = "local" ]; then \
+      HF_HUB_OFFLINE=0 python -c "from fastembed import TextEmbedding; import os; \
+TextEmbedding(model_name=os.environ['EMBEDDING_MODEL'], cache_dir='/srv/models')"; \
+    fi
+
 # Run as an unprivileged user
 RUN useradd --system --uid 10001 --no-create-home app
 COPY --chown=app:app app ./app

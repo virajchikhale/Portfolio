@@ -4,3 +4,6 @@ pydantic>=2.8,<3
 pydantic-settings>=2.4,<3
 pyyaml>=6,<7
 google-genai>=1.0,<2
+psycopg[binary,pool]>=3.2,<4
+pgvector>=0.3,<1
+fastembed>=0.5,<1

@@ -3,7 +3,7 @@ import pytest
 from app.config import Settings
 from app.security.guardrails import GuardrailViolation, check_input
 
-S = Settings(llm_provider="fake", _env_file=None, max_input_chars=50)
+S = Settings(llm_provider="fake", vector_store="memory", embedding_provider="fake", _env_file=None, max_input_chars=50)
 
 
 @pytest.mark.parametrize("bad", [

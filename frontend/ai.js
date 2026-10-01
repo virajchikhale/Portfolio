@@ -26,10 +26,11 @@ function aiErrorMessage(status, body){
 }
 
 /**
- * Ask a question. Calls onDelta(text) for each streamed chunk.
+ * Ask a question. Calls onDelta(text) for each streamed chunk and onSources([{n,label}]) once, before the text,
+ * when the answer is grounded in retrieved sources.
  * Resolves with the full answer; rejects with Error(message) (message is display-safe).
  */
-async function aiAsk(message, onDelta){
+async function aiAsk(message, onDelta, onSources){
   if(AI.busy) throw new Error('Still answering the previous question…');
   AI.busy = true;
   const ctrl = new AbortController();
@@ -69,6 +70,7 @@ async function aiAsk(message, onDelta){
         let evt;
         try{ evt = JSON.parse(data); }catch(e){ continue; }
         if(evt.error) throw new Error(evt.error);
+        if(Array.isArray(evt.sources)){ if(onSources) onSources(evt.sources); continue; }
         if(evt.delta){ full += evt.delta; onDelta(evt.delta); }
       }
     }
@@ -119,6 +121,17 @@ function chatAppend(role, text){
   return body;
 }
 
+/* Under an answer: "Sources: [1] Work experience \u203A Data Science Intern \u2026" (labels come from our own
+   corpus, but are still inserted as text only). */
+function chatAppendSources(row, sources){
+  const el = document.createElement('div');
+  el.className = 'chat-sources';
+  el.textContent = 'Sources: ' + sources.map(x=>'['+x.n+'] '+x.label).join('  \u00B7  ');
+  row.appendChild(el);
+  const log = document.getElementById('chat-log');
+  log.scrollTop = log.scrollHeight;
+}
+
 function chatOpen(){
   openWin('win-chat');
   if(AI.online === null) aiPing();
@@ -136,7 +149,7 @@ async function chatSend(preset){
 
   chatAppend('user', text);
   const out = chatAppend('ai', '…');
-  let started = false;
+  let started = false, sources = [];
   sendBtn.disabled = true; input.disabled = true;
   try{
     await aiAsk(text, chunk=>{
@@ -144,7 +157,8 @@ async function chatSend(preset){
       out.textContent += chunk;
       const log = document.getElementById('chat-log');
       log.scrollTop = log.scrollHeight;
-    });
+    }, s=>{ sources = s; });
+    if(sources.length) chatAppendSources(out.parentElement, sources);
   }catch(e){
     out.textContent = e.message;
     out.classList.add('chat-err');
@@ -187,13 +201,21 @@ async function askInTerminal(question, promptLabel){
   out.appendChild(block);
   out.scrollTop = out.scrollHeight;
 
-  let started = false;
+  let started = false, sources = [];
   try{
     await aiAsk(question, chunk=>{
       if(!started){ ans.textContent = ''; started = true; }
       ans.textContent += chunk;
       out.scrollTop = out.scrollHeight;
-    });
+    }, s=>{ sources = s; });
+    if(sources.length){
+      const src = document.createElement('span');
+      src.className = 't-out';
+      src.style.whiteSpace = 'pre-wrap';
+      src.style.color = '#777';
+      src.textContent = 'sources: ' + sources.map(x=>'['+x.n+'] '+x.label).join(' | ');
+      block.appendChild(src);
+    }
   }catch(e){
     ans.className = 't-err';
     ans.textContent = e.message;

@@ -1,0 +1,156 @@
+[
+ {
+  "q": "Which business intelligence tools has he used?",
+  "expect": [
+   "experience.md",
+   "skills.md"
+  ]
+ },
+ {
+  "q": "Where did he study?",
+  "expect": [
+   "education.md"
+  ]
+ },
+ {
+  "q": "What was his GPA at university?",
+  "expect": [
+   "education.md"
+  ]
+ },
+ {
+  "q": "Has he built any recommender systems?",
+  "expect": [
+   "projects.md"
+  ]
+ },
+ {
+  "q": "How do users sign in to the attendance app?",
+  "expect": [
+   "attendance-system.md"
+  ]
+ },
+ {
+  "q": "What did he do during his data science internship?",
+  "expect": [
+   "experience.md"
+  ]
+ },
+ {
+  "q": "Did he ever work on a government or village project?",
+  "expect": [
+   "experience.md"
+  ]
+ },
+ {
+  "q": "What programming languages does he know?",
+  "expect": [
+   "skills.md"
+  ]
+ },
+ {
+  "q": "Does he have experience with Docker or containers?",
+  "expect": [
+   "skills.md",
+   "projects.md",
+   "attendance-system.md"
+  ]
+ },
+ {
+  "q": "How does the attendance data get stored in the database?",
+  "expect": [
+   "attendance-system.md"
+  ]
+ },
+ {
+  "q": "Who is Viraj and where is he based?",
+  "expect": [
+   "about.md"
+  ]
+ },
+ {
+  "q": "How can I contact him?",
+  "expect": [
+   "about.md"
+  ]
+ },
+ {
+  "q": "Which languages does he speak?",
+  "expect": [
+   "about.md"
+  ]
+ },
+ {
+  "q": "Tell me about his farming project",
+  "expect": [
+   "projects.md"
+  ]
+ },
+ {
+  "q": "Write me a poem about the ocean",
+  "expect": []
+ },
+ {
+  "q": "What is the capital of Australia?",
+  "expect": []
+ },
+ {
+  "q": "What did he do at Inorbvict?",
+  "expect": [
+   "experience.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "Tell me about Reva Tech",
+  "expect": [
+   "experience.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "What is ZCOER?",
+  "expect": [
+   "experience.md",
+   "education.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "What is PHPMailer used for?",
+  "expect": [
+   "attendance-system.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "Where is Nalanda school?",
+  "expect": [
+   "education.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "What did Viraj do at Inorbvict during his internship?",
+  "expect": [
+   "experience.md"
+  ],
+  "kind": "entity"
+ },
+ {
+  "q": "What is the weather in Paris today?",
+  "expect": []
+ },
+ {
+  "q": "Who won the football world cup?",
+  "expect": []
+ },
+ {
+  "q": "Explain quantum computing",
+  "expect": []
+ },
+ {
+  "q": "Give me a good pizza recipe",
+  "expect": []
+ }
+]

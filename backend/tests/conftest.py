@@ -7,7 +7,7 @@ from app.main import create_app
 
 @pytest.fixture
 def settings():
-    return Settings(llm_provider="fake", _env_file=None, rate_limit_per_minute=3, max_input_chars=100)
+    return Settings(llm_provider="fake", vector_store="memory", embedding_provider="fake", _env_file=None, rate_limit_per_minute=3, max_input_chars=100)
 
 
 @pytest.fixture

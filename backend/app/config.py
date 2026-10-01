@@ -2,11 +2,43 @@
 
 Secrets are SecretStr so they are masked in repr()/logs/tracebacks.
 """
+import logging
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+log = logging.getLogger(__name__)
+
+_DEFAULT_MODEL = {
+    "local": "sentence-transformers/all-MiniLM-L6-v2",
+    "gemini": "gemini-embedding-001",
+    "fake": "fake-hash",
+}
+# Cosine scores are NOT comparable across models, so the "I have no source for this" cutoff is per model.
+# Midpoints of the clean gap measured with scripts/eval_retrieval.py on evals/retrieval_set.json (re-run after
+# changing the corpus or model). Models not listed fall back to 0.35: calibrate them before trusting it.
+_DEFAULT_MIN_SCORE = {
+    "sentence-transformers/all-minilm-l6-v2": 0.22,
+    "nomic-ai/nomic-embed-text-v1.5-q": 0.52,
+    "thenlper/gte-base": 0.77,
+}
+_FALLBACK_MIN_SCORE = 0.35
+_DEFAULT_DIM = {"local": 384, "gemini": 768, "fake": 768}  # MiniLM = 384; Gemini is truncated to 768
+
+
+def _local_model_dim(model: str) -> int:
+    """Vector size of a fastembed model, so EMBEDDING_MODEL alone is enough to switch models."""
+    try:
+        from fastembed import TextEmbedding
+
+        for m in TextEmbedding.list_supported_models():
+            if m["model"].lower() == model.lower():
+                return int(m["dim"])
+    except ImportError:
+        log.warning("fastembed is not installed; assuming %d dims for local model %s", _DEFAULT_DIM["local"], model)
+    return _DEFAULT_DIM["local"]
 
 
 class Settings(BaseSettings):
@@ -24,6 +56,19 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(0.3, ge=0, le=2)
     llm_timeout_s: float = Field(30, gt=0)
 
+    # ── RAG (retrieval) ─────────────────────────────────────────────────────
+    # local = fastembed (ONNX, CPU, no API/quota, content never leaves your machine); gemini = hosted; fake = tests
+    embedding_provider: Literal["local", "gemini", "fake"] = "local"
+    embedding_model: str | None = None  # default per provider: see _DEFAULT_MODEL / _DEFAULT_DIM below
+    embedding_dim: int | None = Field(None, ge=8, le=2000)  # default per provider; HNSW supports up to 2000 dims
+    embedding_cache_dir: str = "models"  # where the local model files live (baked into the Docker image)
+    vector_store: Literal["pgvector", "memory"] = "pgvector"
+    database_url: SecretStr | None = None  # postgresql://user:pass@host:5432/db (pass must be URL-safe)
+    data_dir: str = "data"
+    ingest_on_startup: bool = True  # embeds only new/changed chunks, so restarts are cheap
+    rag_top_k: int = Field(4, ge=1, le=20)
+    rag_min_score: float | None = Field(None, ge=0, le=1)  # default per model; tune with scripts/eval_retrieval.py
+
     # ── Guardrails / abuse protection ───────────────────────────────────────
     max_input_chars: int = Field(800, ge=1)
     max_history_turns: int = Field(6, ge=0)
@@ -38,6 +83,18 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     skills_dir: str = "skills"
     environment: Literal["dev", "prod"] = "dev"
+
+    @model_validator(mode="after")
+    def _embedding_defaults(self):
+        # Changing provider/model changes the vector size: leave both unset to get a consistent pair.
+        if self.embedding_model is None:
+            self.embedding_model = _DEFAULT_MODEL[self.embedding_provider]
+        if self.embedding_dim is None:
+            self.embedding_dim = (_local_model_dim(self.embedding_model) if self.embedding_provider == "local"
+                                  else _DEFAULT_DIM[self.embedding_provider])
+        if self.rag_min_score is None:
+            self.rag_min_score = _DEFAULT_MIN_SCORE.get(self.embedding_model.lower(), _FALLBACK_MIN_SCORE)
+        return self
 
     @field_validator("cors_origins")
     @classmethod

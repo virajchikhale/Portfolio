@@ -1,7 +1,32 @@
 services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (URL-safe characters only)}
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    expose: ["5432"]          # internal network only, never published to the host
+
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:   # which embedding model to bake into the image (must match the runtime EMBEDDING_* values)
+        EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
+        EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
     env_file: .env            # GEMINI_API_KEY etc. — never baked into the image
+    environment:
+      VECTOR_STORE: pgvector
+      DATABASE_URL: postgresql://${POSTGRES_USER:-portfolio}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-portfolio}
+    depends_on:
+      db: { condition: service_healthy }
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
@@ -19,3 +44,6 @@ services:
     tmpfs: [/tmp]
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+
+volumes:
+  pgdata:

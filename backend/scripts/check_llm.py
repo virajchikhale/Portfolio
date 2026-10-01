@@ -49,13 +49,25 @@ async def main() -> int:
         async for t in GeminiClient(s).stream("Answer in one short sentence.", [Message("user", "Say hello.")]):
             out += t
         print("    OK:", out.strip())
-        return 0
+        rc = 0
     except Exception as e:
         print(f"    FAILED: {e}")
         cause = e.__cause__
         if cause:
             print(f"    underlying: {type(cause).__name__}: {str(cause)[:400]}")
-        return 1
+        rc = 1
+
+    print(f"\n[3] Embedding test with '{s.embedding_model}' (dim {s.embedding_dim}) ...")
+    try:
+        from app.rag.embeddings import GeminiEmbedder
+
+        v = await GeminiEmbedder(s).embed_query("hello")
+        print(f"    OK: {len(v)}-dim vector")
+    except Exception as e:
+        print(f"    FAILED: {e} (check EMBEDDING_MODEL against the model list in step 1; embedding models "
+              "support embedContent, not generateContent, so they may not be listed above)")
+        rc = 1
+    return rc
 
 
 if __name__ == "__main__":
