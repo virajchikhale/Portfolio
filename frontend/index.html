@@ -65,6 +65,7 @@
         <div class="dd-row" onclick="openWin('win-contact')">Contact</div>
         <div class="dd-row" onclick="openWin('win-ie')">Internet Explorer</div>
         <div class="dd-row" onclick="openResume()">Resume</div>
+        <div class="dd-row" onclick="location.href='recruiter.html'">Recruiter View</div>
         <div class="dd-row" onclick="location.href='lite.html'">Plain Version</div>
         <div class="dd-hr"></div>
         <div class="dd-row" onclick="location.reload()">Restart</div>
@@ -98,6 +99,8 @@
         <div class="dd-row" onclick="showAlert('Double-click desktop icons to open.\nDrag windows by title bar.\nResize from bottom-right corner.')">How to Use</div>
       </div>
     </div>
+
+    <a class="mb-recruiter" href="recruiter.html" title="A plain, easy-to-read version of everything on this desktop">RECRUITER VIEW &gt;</a>
 
     <div class="mb-right" id="mb-clock">--:--</div>
   </div>
@@ -236,6 +239,7 @@
             <div class="chat-text">Hi! Ask me anything about Viraj&rsquo;s skills, projects or experience.</div></div>
           <div id="chat-suggest"></div>
         </div>
+        <a class="chat-recruiter" href="recruiter.html">Not technical? Open the easy-to-read Recruiter View &gt;</a>
         <div class="chat-input-row">
           <input id="chat-in" type="text" maxlength="800" autocomplete="off" placeholder="Ask a question..." onkeydown="chatKey(event)"/>
           <label class="chat-agent" title="Let the model decide which tools to use (slower, more model calls)"><input type="checkbox" id="chat-agent"/> AGENT</label>

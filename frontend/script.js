@@ -412,6 +412,14 @@ function initOS(){
   drawAvatar(document.getElementById('av-canvas'));
   // Clock
   startClock();
+  // Land visitors on the AI: open the chat on desktop widths (not for automated browsers, so e2e starts clean).
+  // Opens VC·AI, Flow, About and Skills in an aligned layout; ?open=none keeps the desktop as it was.
+  try{
+    const want = new URLSearchParams(location.search).get('open');
+    if(want !== 'none' && !navigator.webdriver && window.innerWidth > 768 && typeof chatOpen === 'function'){
+      setTimeout(()=>{ landingLayout(); setTimeout(landingLayout, 500); const i = document.getElementById('chat-in'); if(i) i.focus(); if(AI.online === null) aiPing(); }, 250);
+    }
+  }catch(e){}
   // Register window mousedown for focus
   document.querySelectorAll('.mac-win').forEach(w=>{
     w.addEventListener('mousedown', ()=>bringFront(w.id));
@@ -474,6 +482,33 @@ function placeChatFlow(){
   const left=Math.max(pad, Math.floor((dw-(cw+gap+fw))/2));
   chat.style.width=cw+'px'; chat.style.left=left+'px'; chat.style.top='24px';
   flow.style.width=fw+'px'; flow.style.left=(left+cw+gap)+'px'; flow.style.top='24px';
+}
+
+// Landing layout: VC·AI | Flow Monitor | About over Skills, all aligned and non-overlapping.
+// Needs room (the icon strip on the right takes ~110px); on narrower screens only chat + Flow are shown.
+function landingLayout(){
+  const desk = document.getElementById('desktop');
+  const dw = desk.clientWidth, dh = desk.clientHeight;
+  const pad = 10, gap = 10, icons = 110, top = 10;
+  const wide = dw >= 1100;
+  const h = Math.max(300, dh - top - pad);
+  const chatW = 380, sideW = wide ? 290 : 0;
+  const flowW = Math.max(360, dw - icons - pad - chatW - gap - (wide ? sideW + gap : 0) - (wide ? 0 : 0));
+  const set = (id, l, t, w, hh)=>{
+    const el = document.getElementById(id);
+    el.style.left = l+'px'; el.style.top = t+'px'; el.style.width = w+'px'; el.style.height = hh+'px';
+  };
+  const openQuiet = id=>{ const el = document.getElementById(id); if(el.style.display==='none') openWin(id); };
+  if(wide){ openQuiet('win-about'); openQuiet('win-skills'); }
+  openQuiet('win-flow'); openQuiet('win-chat');
+  set('win-chat', pad, top, chatW, h);
+  set('win-flow', pad+chatW+gap, top, flowW, h);
+  if(wide){
+    const sx = pad+chatW+gap+flowW+gap, hh = Math.floor((h-gap)/2);
+    set('win-about', sx, top, sideW, hh);
+    set('win-skills', sx, top+hh+gap, sideW, h-hh-gap);
+  }
+  bringFront('win-chat');
 }
 
 function openWin(id){

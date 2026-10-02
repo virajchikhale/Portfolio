@@ -1380,3 +1380,16 @@ body[data-theme="dark"] .flow-sync input:checked,body[data-theme="dark"] .chat-a
 body[data-theme="dark"] .flow-sync input:focus-visible,body[data-theme="dark"] .chat-agent input:focus-visible,body[data-theme="dark"] #flow-runs:focus-visible{outline-color:#e8e8e8;}
 body[data-theme="dark"] #flow-runs{color:#e8e8e8;border-color:#aaa;background-color:#1e1e1e;
   background-image:linear-gradient(45deg,transparent 50%,#e8e8e8 50%),linear-gradient(135deg,#e8e8e8 50%,transparent 50%);}
+
+/* ── Recruiter-view entry points ── */
+.mb-recruiter{margin-left:auto;align-self:center;font-size:7px;padding:4px 8px;margin-right:6px;background:#000;color:#fff;
+  text-decoration:none;border:2px solid #000;white-space:nowrap;animation:rvpulse 2.4s ease-in-out infinite;}
+.mb-recruiter:hover{background:#fff;color:#000;}
+.mb-recruiter + .mb-right{margin-left:0;}
+@keyframes rvpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,0,0,.5);}50%{box-shadow:0 0 0 4px rgba(0,0,0,0);}}
+@media (prefers-reduced-motion: reduce){ .mb-recruiter{animation:none;} }
+.chat-recruiter{display:block;padding:6px 10px;border-top:2px solid #000;background:#f0f0f0;color:#000;font-size:7px;line-height:1.6;text-decoration:underline;}
+.chat-recruiter:hover{background:#000;color:#fff;}
+body[data-theme="dark"] .mb-recruiter{background:#e8e8e8;color:#111;border-color:#e8e8e8;}
+body[data-theme="dark"] .chat-recruiter{background:#1a1a1a;color:#ddd;border-color:#444;}
+@media (max-width: 768px){ .mb-recruiter{font-size:6px;padding:4px 6px;} }

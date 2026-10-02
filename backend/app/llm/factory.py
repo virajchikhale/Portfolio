@@ -54,4 +54,8 @@ def build_llm(settings: Settings) -> LLMClient:
         from app.llm.gemini import GeminiClient
 
         return GeminiClient(settings)
+    if settings.llm_provider == "openai":
+        from app.llm.openai_compat import OpenAICompatClient
+
+        return OpenAICompatClient(settings)
     raise ValueError(f"unknown LLM_PROVIDER {settings.llm_provider!r}")

@@ -54,7 +54,17 @@ const CONFIG = {
      { role:'AI Engineer', company:'Company', period:'2023 \u2013 Present', location:'Pune',
        points:['Built X that did Y (metric)', '...'] }
   ─────────────────────────────────────────────────────────── */
-  experience: [],
+  experience: [
+    { role: 'Data Science Intern', company: 'Inorbvict Healthcare India Pvt Ltd', period: 'Sep 2024 \u2013 Jan 2025', location: 'Hinjewadi, Pune',
+      points: ['Managed an international sales chatbot: troubleshooting user issues and refining workflows.',
+               'Designed and implemented 20+ Power BI dashboards to track employee performance and improve reporting accuracy.'] },
+    { role: 'Tableau Development Intern', company: 'ZCOER', period: 'Jan 2024 \u2013 Apr 2024', location: 'Pune',
+      points: ['Used Tableau to analyze customer data, boosting sales conversion by 15% through targeted marketing.',
+               'Cut operational costs by 10% by identifying inefficiencies with interactive visualizations.'] },
+    { role: 'Full Stack Web Developer', company: 'Reva Tech Software Solution', period: 'Jul 2022 \u2013 Jan 2023', location: 'Manchar',
+      points: ['Built a Gram Panchayat web app that improved citizen service delivery by 20%.',
+               'Gave officials real-time dashboards and reports (SQL, PHP, AJAX) to track applications.'] },
+  ],
 
   /* ── Stats shown in About window ─────────────────────────── */
   stats: [
