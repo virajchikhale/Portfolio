@@ -75,16 +75,16 @@ function renderFromConfig(){
     const cards = C.projects.map(p=>{
       const tags  = p.tags.map(t=>`<span class="pc-tag">${t}</span>`).join('');
       const allLinks = [].concat(
-        p.repo ? [{label:'\uD83D\uDC08 Code', url:p.repo}] : [],
-        p.demo ? [{label:'\u25B6 Live Demo', url:p.demo}] : [],
-        p.writeup ? [{label:'\uD83D\uDCC4 Write-up', url:p.writeup}] : [],
+        p.repo ? [{label:'Code', url:p.repo}] : [],
+        p.demo ? [{label:'Live demo', url:p.demo}] : [],
+        p.writeup ? [{label:'Write-up', url:p.writeup}] : [],
         p.links || []
       );
       const links = allLinks.map(l=>`<span class="pc-link" onclick="ieOpen('${l.url}')">${l.label}</span>`).join('');
       const metrics = (p.metrics||[]).map(m=>`<li>${m}</li>`).join('');
       return `
         <div class="pc">
-          <div class="pc-head"><span>${p.icon} ${p.name}</span></div>
+          <div class="pc-head"><span>${p.name}</span></div>
           <div class="pc-body">
             <p>${p.desc}</p>
             ${metrics?`<ul style="margin:0 0 6px 12px;padding:0;font-size:7px;line-height:2;">${metrics}</ul>`:''}
@@ -129,7 +129,7 @@ function renderFromConfig(){
   const favBar = document.getElementById('ie-fav-bar');
   if(favBar){
     const cats = [...new Set(C.favorites.map(f=>f.cat))];
-    let favHTML = '<div class="ie-fav-title"><span>\u2605 Favorites</span></div>';
+    let favHTML = '<div class="ie-fav-title"><span>Favorites</span></div>';
     cats.forEach(cat=>{
       favHTML += `<div class="ie-fav-cat">${cat}</div>`;
       C.favorites.filter(f=>f.cat===cat).forEach(f=>{
@@ -219,6 +219,15 @@ function drawChat(canvas){
     // three dots
     const y=Math.round(h*0.4), d=Math.max(2,Math.round(w*0.08));
     [0.3,0.5,0.7].forEach(x=>c.fillRect(Math.round(w*x)-1,y,d,d));
+  });
+}
+function drawActivity(canvas){
+  px(canvas,(c,w,h)=>{
+    // a tiny bar chart on a baseline
+    c.fillStyle='#000';
+    const bw=Math.round(w*0.16), gap=Math.round(w*0.07), base=h-6;
+    [0.35,0.65,0.5,0.85].forEach((f,i)=>{ const bh=Math.round((h-12)*f); c.fillRect(4+i*(bw+gap), base-bh, bw, bh); });
+    c.fillRect(2, base, w-4, 2);
   });
 }
 function drawFlow(canvas){
@@ -387,6 +396,7 @@ function initOS(){
   drawIE(document.getElementById('ic5'));
   drawChat(document.getElementById('ic6'));
   drawFlow(document.getElementById('ic7'));
+  drawActivity(document.getElementById('ic8'));
   // Dock icons
   drawPerson(document.getElementById('dk0'));
   drawStar(document.getElementById('dk1'));
@@ -396,6 +406,7 @@ function initOS(){
   drawIE(document.getElementById('dk5'));
   drawChat(document.getElementById('dk6'));
   drawFlow(document.getElementById('dk7'));
+  drawActivity(document.getElementById('dk8'));
   chatInit();
   // Avatar
   drawAvatar(document.getElementById('av-canvas'));
@@ -443,7 +454,7 @@ let zTop = 30;
 const WIN_DOCK = {
   'win-about':'dk-about','win-skills':'dk-skills',
   'win-projects':'dk-projects','win-terminal':'dk-terminal','win-contact':'dk-contact',
-  'win-ie':'dk-ie','win-chat':'dk-chat','win-flow':'dk-flow'
+  'win-ie':'dk-ie','win-chat':'dk-chat','win-flow':'dk-flow','win-activity':'dk-activity'
 };
 
 function bringFront(id){
@@ -489,11 +500,13 @@ function openWin(id){
   if(dk) dk.classList.add('running');
   // The Flow Monitor must be set up however it was opened (dock, menu, icon, button, terminal).
   if(id==='win-flow' && typeof Flow!=='undefined') Flow.afterOpen();
+  if(id==='win-activity' && typeof Activity!=='undefined') Activity.afterOpen();
 }
 
 function closeWin(id){
   snd('close');
-  if(id==='win-flow' && typeof Flow!=='undefined') Flow.skip();   // never leave the chat answer waiting on a closed monitor
+  if(id==='win-flow' && typeof Flow!=='undefined') Flow.skip();
+  if(id==='win-activity' && typeof Activity!=='undefined') Activity.afterClose();   // never leave the chat answer waiting on a closed monitor
   const el = document.getElementById(id);
   el.style.display = 'none';
   const dk = document.getElementById(WIN_DOCK[id]);
@@ -647,6 +660,7 @@ const CMDS = {
       '<span class="t-out">  ask [q]  &mdash; ask VC&middot;AI a question</span>',
       '<span class="t-out">  chat     &mdash; open VC&middot;AI window</span>',
       '<span class="t-out">  flow     &mdash; watch how answers are made</span>',
+      '<span class="t-out">  stats    &mdash; activity monitor</span>',
       '<span class="t-out">  agent    &mdash; toggle agent mode (tool-calling loop)</span>',
       '<span class="t-out">  experience &mdash; work history</span>',
       '<span class="t-out">  resume   &mdash; open resume</span>',
@@ -676,6 +690,7 @@ const CMDS = {
   experience:()=>{ snd('open'); openWin('win-experience'); return `<span class="t-out">Opening Experience...</span>`; },
   resume:   ()=>{ snd('open'); return openResume() ? `<span class="t-out">Opening resume...</span>` : `<span class="t-err">No resume configured yet.</span>`; },
   lite:     ()=>{ snd('open'); setTimeout(()=>{ location.href='lite.html'; },300); return `<span class="t-out">Loading plain version...</span>`; },
+  stats:    ()=>{ snd('open'); activityOpen(); return `<span class="t-out">Opening Activity...</span>`; },
   flow:     ()=>{ snd('open'); flowOpen(); return `<span class="t-out">Opening Flow Monitor...</span>`; },
   agent:    ()=>{ snd('click'); const on = AI.mode !== 'agent'; AI.setMode(on ? 'agent' : 'pipeline'); return `<span class="t-out">Agent mode ${on ? 'ON: the model decides which tools to call (see the Flow Monitor)' : 'OFF: fast fixed pipeline'}.</span>`; },
   chat:     ()=>{ snd('open'); chatOpen(); return `<span class="t-out">Opening VC\u00B7AI...</span>`; },
@@ -705,11 +720,11 @@ function termKey(e){
 
   let res = '';
   if(cmd === 'echo'){
-    res = `<span class="t-out">${parts.slice(1).join(' ')}</span>`;
+    res = `<span class="t-out">${escHtml(parts.slice(1).join(' '))}</span>`;
   } else if(cmd === 'open'){
     const url = parts.slice(1).join(' ').trim();
     if(!url){ res = `<span class="t-err">Usage: open [url]</span>`; }
-    else { ieOpen(url); res = `<span class="t-out">Opening ${url} in Internet Explorer...</span>`; }
+    else { ieOpen(url); res = `<span class="t-out">Opening ${escHtml(url)} in Internet Explorer...</span>`; }
   } else if(cmd === 'ask'){
     const q = parts.slice(1).join(' ').trim();
     if(!q){ res = `<span class="t-err">Usage: ask [question]  e.g. ask what projects has Viraj built?</span>`; }
@@ -717,14 +732,14 @@ function termKey(e){
   } else if(CMDS[cmd]){
     res = CMDS[cmd]();
   } else {
-    res = `<span class="t-err">-bash: ${cmd}: command not found</span>`;
+    res = `<span class="t-err">-bash: ${escHtml(cmd)}: command not found</span>`;
   }
 
   if(res === '__CLEAR__'){ out.innerHTML=''; return; }
 
   const block = document.createElement('div');
   block.className = 'term-block';
-  block.innerHTML = `<span class="t-cmd">${window._TERM_PROMPT||"$"} ${raw}</span>${res}`;
+  block.innerHTML = `<span class="t-cmd">${escHtml(window._TERM_PROMPT||'$')} ${escHtml(raw)}</span>${res}`;
   out.appendChild(block);
   out.scrollTop = out.scrollHeight;
 }
@@ -743,13 +758,14 @@ function termRun(cmd){
 ══════════════════════════════════════════════════════ */
 function setTheme(mode){
   document.body.dataset.theme = mode;
-  localStorage.setItem('vc-os-theme', mode);
+  try{ localStorage.setItem('vc-os-theme', mode); }catch(e){}   // site data may be blocked: the theme still applies
 }
 
 // Apply saved theme on load (called before runBoot)
 (function(){
-  const saved = localStorage.getItem('vc-os-theme');
-  if(saved) document.body.dataset.theme = saved;
+  let saved = null;
+  try{ saved = localStorage.getItem('vc-os-theme'); }catch(e){}   // blocked storage must not stop the OS from booting
+  if(saved === 'dark' || saved === 'light') document.body.dataset.theme = saved;
 })();
 
 /* ══════════════════════════════════════════════════════
@@ -793,7 +809,7 @@ function handleSend(){
     body: JSON.stringify({ email: from, subject, message }),
   }).then(r=>{
     if(!r.ok) throw new Error('HTTP '+r.status);
-    btn.textContent = '\u2713 SENT!';
+    btn.textContent = 'SENT';
     setTimeout(reset, 3000);
   }).catch(()=>{
     snd('alert');
@@ -824,73 +840,73 @@ const IE_SITES = {
   // keyed by hostname or special '#slug'
   'github.com': {
     name: 'GitHub — virajchikhale',
-    logo: '&#128008;',
+    logo: 'GH',
     banner: 'code',
     desc: 'Viraj\'s GitHub profile. Explore repositories covering agentic AI workflows, LLM tooling, MCP integrations, RAG pipelines and more.',
     tags: ['Python','TypeScript','LangChain','LiteLLM','Agentic AI','MCP'],
-    stats: [{v:'AI',l:'FOCUSED'},{v:'Open',l:'SOURCE'},{v:'&#9679;',l:'ACTIVE'}],
-    actions: [{label:'&#128279; View Profile', url:'https://github.com/virajchikhale'},{label:'&#128008; Explore', url:'https://github.com/virajchikhale', ghost:true}],
+    stats: [{v:'AI',l:'FOCUSED'},{v:'Open',l:'SOURCE'},{v:'Live',l:'ACTIVE'}],
+    actions: [{label:'View Profile', url:'https://github.com/virajchikhale'},{label:'Explore', url:'https://github.com/virajchikhale', ghost:true}],
     hint: 'github.com/virajchikhale'
   },
   'linkedin.com': {
     name: 'LinkedIn — Viraj Chikhale',
-    logo: '&#128188;',
+    logo: 'in',
     banner: 'network',
     desc: 'Viraj Chikhale on LinkedIn. AI/ML Engineer specialising in agentic workflows, LangChain, LiteLLM and MCP protocol. Open to collaborations.',
     tags: ['AI/ML','Agentic AI','LangChain','Python','TypeScript','MCP'],
-    stats: [{v:'AI/ML',l:'ENGINEER'},{v:'India',l:'&#127470;&#127475;'},{v:'Open',l:'TO WORK'}],
-    actions: [{label:'&#128188; View Profile', url:'https://linkedin.com/in/virajchikhale'},{label:'&#127760; Visit Site', url:'https://linkedin.com', ghost:true}],
+    stats: [{v:'AI/ML',l:'ENGINEER'},{v:'India',l:'IN'},{v:'Open',l:'TO WORK'}],
+    actions: [{label:'View Profile', url:'https://linkedin.com/in/virajchikhale'},{label:'Visit Site', url:'https://linkedin.com', ghost:true}],
     hint: 'linkedin.com/in/virajchikhale'
   },
   'google.com': {
     name: 'Google',
-    logo: '&#128269;',
+    logo: 'G',
     banner: 'search',
     desc: 'Google Search is the world\'s most widely used web search engine. Search billions of web pages, images, videos, maps and more in milliseconds.',
     tags: ['Search','Web','Maps','Gmail','Chrome'],
     stats: [{v:'8.5B',l:'SEARCHES/DAY'},{v:'4.3B',l:'USERS'},{v:'200+',l:'PRODUCTS'}],
-    actions: [{label:'&#128279; Open Google', url:'https://google.com'}],
+    actions: [{label:'Open Google', url:'https://google.com'}],
     hint: 'google.com'
   },
   'wikipedia.org': {
     name: 'Wikipedia',
-    logo: '&#128214;',
+    logo: 'W',
     banner: 'wiki',
     desc: 'Wikipedia is a free, multilingual online encyclopedia written and maintained by a community of volunteer contributors. The world\'s largest reference website.',
     tags: ['Encyclopedia','Free','Open','Knowledge','Wiki'],
     stats: [{v:'60M+',l:'ARTICLES'},{v:'300+',l:'LANGUAGES'},{v:'1.7B',l:'VISITORS/MO'}],
-    actions: [{label:'&#128214; Visit Wikipedia', url:'https://wikipedia.org'}],
+    actions: [{label:'Visit Wikipedia', url:'https://wikipedia.org'}],
     hint: 'wikipedia.org'
   },
   // special slugs for projects without live URLs
   '#ecommerce': {
     name: 'E-Commerce App',
-    logo: '&#128722;',
+    logo: 'EC',
     banner: 'shop',
     desc: 'Full-stack e-commerce platform with product listings, cart management, user authentication, and Stripe payment integration. Mobile-first responsive design.',
     tags: ['React','Node.js','MongoDB','Stripe','REST API'],
     stats: [{v:'20+',l:'FEATURES'},{v:'<2s',l:'LOAD TIME'},{v:'100%',l:'RESPONSIVE'}],
-    actions: [{label:'&#128008; View on GitHub', url:'https://github.com/virajchikhale', ghost:true}],
+    actions: [{label:'View on GitHub', url:'https://github.com/virajchikhale', ghost:true}],
     hint: 'Project by Viraj Chikhale'
   },
   '#chat': {
     name: 'Real-time Chat App',
-    logo: '&#128172;',
+    logo: 'CH',
     banner: 'chat',
     desc: 'WebSocket-based real-time chat application featuring rooms, private messaging, emoji reactions, file sharing, and live online presence tracking.',
     tags: ['Socket.io','React','Redis','Node.js','WebSockets'],
     stats: [{v:'<50ms',l:'LATENCY'},{v:'∞',l:'ROOMS'},{v:'Real-time',l:'PRESENCE'}],
-    actions: [{label:'&#128008; View on GitHub', url:'https://github.com/virajchikhale', ghost:true}],
+    actions: [{label:'View on GitHub', url:'https://github.com/virajchikhale', ghost:true}],
     hint: 'Project by Viraj Chikhale'
   },
   'virajchikhale.github.io': {
     name: 'VC\u00B7OS Portfolio',
-    logo: '&#127968;',
+    logo: 'VC',
     banner: 'pyos',
     desc: 'You are inside it! A Mac OS 1984-inspired interactive portfolio built by Viraj Chikhale with vanilla HTML, CSS &amp; JS. Draggable windows, terminal, dock, menu bar and this very browser.',
     tags: ['HTML','CSS','JavaScript','Mac OS','Pixel Art','No Frameworks'],
     stats: [{v:'0',l:'FRAMEWORKS'},{v:'6+',l:'APPS'},{v:'100%',l:'HAND-CODED'}],
-    actions: [{label:'&#127968; Live Site', url:'https://github.com/virajchikhale'},{label:'&#128008; GitHub', url:'https://github.com/virajchikhale', ghost:true}],
+    actions: [{label:'Live Site', url:'https://github.com/virajchikhale'},{label:'GitHub', url:'https://github.com/virajchikhale', ghost:true}],
     hint: 'VC\u00B7OS by Viraj Chikhale'
   },
 };
@@ -996,16 +1012,60 @@ function ieRenderHome(){
     <div class="ie-home-title">Internet Explorer</div>
     <div class="ie-home-sub">VC\u00B7OS Browser v1.0<br>Type a URL above or click a Favorite to browse.</div>
     <div class="ie-home-links">
-      <span class="ie-home-link" onclick="ieOpen('https://github.com/virajchikhale')">&#128008; GitHub</span>
-      <span class="ie-home-link" onclick="ieOpen('https://linkedin.com/in/virajchikhale')">&#128188; LinkedIn</span>
-      <span class="ie-home-link" onclick="ieOpen('https://virajchikhale.github.io/')">&#127968; Portfolio</span>
-      <span class="ie-home-link" onclick="ieOpen('https://google.com')">&#128269; Google</span>
+      <span class="ie-home-link" onclick="ieOpen('https://github.com/virajchikhale')">GitHub</span>
+      <span class="ie-home-link" onclick="ieOpen('https://linkedin.com/in/virajchikhale')">LinkedIn</span>
+      <span class="ie-home-link" onclick="ieOpen('https://virajchikhale.github.io/')">Portfolio</span>
+      <span class="ie-home-link" onclick="ieOpen('https://google.com')">Google</span>
     </div>`;
   el.appendChild(wrap);
 }
 
 /* ── OG Meta Fetcher via CORS proxy ─────────────── */
+/* ── Safe handling of anything that did not come from this repo ──────────────────────────────
+   Page metadata from other sites is UNTRUSTED. It must never reach innerHTML or an attribute unescaped (a page title
+   like <img onerror=...> would otherwise run script in this origin), and only http(s) URLs may be opened. */
+function escHtml(v){
+  return String(v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function safeHttpUrl(u){
+  try{ const x = new URL(u); return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : ''; }catch(e){ return ''; }
+}
+function ieMono(host){ return (String(host).replace(/^www\./,'').split('.')[0] || '?').slice(0,2).toUpperCase(); }
+function ieEl(tag, cls, text){
+  const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e;
+}
+
+/* One card builder for every external site: DOM + textContent only, no markup from the network. */
+function ieBuildCard({host, url, title, desc, image, note, loading}){
+  const el = document.getElementById('ie-page-content'); el.textContent = '';
+  const card = ieEl('div', 'ie-card');
+  const banner = ieEl('div', 'ie-card-banner');
+  banner.style.cssText = 'background:#f0f0f0;overflow:hidden;display:flex;align-items:center;justify-content:center;';
+  const noImg = ()=>{ banner.textContent = ''; banner.appendChild(ieEl('span', '', loading ? 'FETCHING PREVIEW...' : 'NO PREVIEW IMAGE')).style.cssText = "font-size:7px;color:#aaa;font-family:'Press Start 2P',monospace;"; };
+  const img = safeHttpUrl(image || '');
+  if(img){
+    const im = document.createElement('img');
+    im.alt = ''; im.referrerPolicy = 'no-referrer'; im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    im.addEventListener('error', noImg);
+    im.src = img; banner.appendChild(im);
+  }else noImg();
+  const info = ieEl('div', 'ie-card-info'), top = ieEl('div', 'ie-card-top');
+  top.appendChild(ieEl('div', 'ie-card-logo', ieMono(host)));
+  const meta = ieEl('div', 'ie-card-meta');
+  meta.append(ieEl('div', 'ie-card-name', title), ieEl('div', 'ie-card-url', url || host), ieEl('div', 'ie-card-desc', desc));
+  top.appendChild(meta); info.appendChild(top);
+  const safe = safeHttpUrl(url || '');
+  if(safe){
+    const acts = ieEl('div', 'ie-card-actions'), a = ieEl('a', 'ie-action-btn', 'Open in a new tab');
+    a.href = safe; a.target = '_blank'; a.rel = 'noopener noreferrer'; acts.appendChild(a); info.appendChild(acts);
+  }
+  info.appendChild(ieEl('div', 'ie-newtab-hint', note || 'VC\u00B7OS Internet Explorer v1.0'));
+  card.append(banner, info); el.appendChild(card);
+}
+
 async function ieFetchOG(url){
+  // Live previews send the typed address to a third-party CORS proxy, so they are OFF unless the owner opts in.
+  if(!CONFIG.ieLivePreview) throw new Error('live preview disabled');
   // allorigins returns {contents: '<html>...'} — free CORS proxy
   const proxy = (CONFIG.proxyUrl || 'https://api.allorigins.win/get?url=') + encodeURIComponent(url);
   const res = await fetch(proxy, {signal: AbortSignal.timeout(8000)});
@@ -1036,115 +1096,37 @@ async function ieFetchOG(url){
   return og;
 }
 
-/* Render a live OG preview card */
+/* Render a live OG preview card (only reachable when CONFIG.ieLivePreview is on). */
 function ieRenderOGCard(url, og){
-  const el = document.getElementById('ie-page-content');
   let host = url;
   try{ host = new URL(url).hostname.replace('www.',''); }catch(e){}
-
-  const title    = og.title    || host;
-  const desc     = og.desc     || 'No description available.';
-  const siteName = og.siteName || host;
-  const imgUrl   = og.image    || '';
-
-  // Banner: og:image if available, else pattern
-  const bannerHTML = imgUrl
-    ? `<img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML='<span style=font-size:36px;opacity:0.15>&#127760;</span>'">`
-    : `<span style="font-size:36px;opacity:0.15;">&#127760;</span>`;
-
-  el.innerHTML = `
-    <div class="ie-card">
-      <div class="ie-card-banner" style="background:#f0f0f0;overflow:hidden;">
-        ${bannerHTML}
-      </div>
-      <div class="ie-card-info">
-        <div class="ie-card-top">
-          <div class="ie-card-logo">
-            <img src="https://www.google.com/s2/favicons?domain=${host}&sz=32"
-              width="32" height="32"
-              style="image-rendering:pixelated;"
-              onerror="this.outerHTML='&#127760;'"/>
-          </div>
-          <div class="ie-card-meta">
-            <div class="ie-card-name">${title}</div>
-            <div class="ie-card-url">${siteName} &mdash; ${host}</div>
-            <div class="ie-card-desc">${desc}</div>
-          </div>
-        </div>
-        <div class="ie-card-divider"></div>
-        <div class="ie-card-actions">
-          <a class="ie-action-btn" href="${url}" target="_blank">&#128279; Open ${host} &#8599;</a>
-        </div>
-        <div class="ie-newtab-hint">&#9432; Live preview via Open Graph metadata &mdash; VC\u00B7OS Internet Explorer v1.0</div>
-      </div>
-    </div>`;
+  ieBuildCard({host, url, title: og.title || host, desc: og.desc || 'No description available.', image: og.image,
+               note: 'Live preview from Open Graph metadata. VC\u00B7OS Internet Explorer v1.0'});
 }
 
-/* Render unknown — now tries OG fetch first */
 async function ieRenderUnknown(url){
-  const el = document.getElementById('ie-page-content');
   let host = url;
   try{ host = new URL(url).hostname.replace('www.',''); }catch(e){}
-
-  // Show skeleton while fetching
-  el.innerHTML = `
-    <div class="ie-card">
-      <div class="ie-card-banner" style="background:#f0f0f0;align-items:center;justify-content:center;display:flex;">
-        <span style="font-size:7px;color:#aaa;font-family:'Press Start 2P',monospace;">FETCHING PREVIEW...</span>
-      </div>
-      <div class="ie-card-info">
-        <div class="ie-card-top">
-          <div class="ie-card-logo" style="background:#f0f0f0;border:2px solid #ddd;">
-            <img src="https://www.google.com/s2/favicons?domain=${host}&sz=32" width="32" height="32" style="image-rendering:pixelated;" onerror="this.outerHTML='&#127760;'"/>
-          </div>
-          <div class="ie-card-meta">
-            <div class="ie-card-name" style="background:#eee;color:#eee;border-radius:2px;">Loading title...</div>
-            <div class="ie-card-url">${host}</div>
-            <div class="ie-card-desc" style="color:#bbb;">Fetching Open Graph metadata from the page...</div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-
-  try {
+  if(!CONFIG.ieLivePreview){ ieFallbackUnknown(url, host, true); return; }
+  ieBuildCard({host, url, title: 'Loading title...', desc: 'Fetching Open Graph metadata from the page...', loading: true});
+  try{
     const og = await ieFetchOG(url);
-    // If we got at least a title or description, show the real card
     if(og.title || og.desc){
       ieRenderOGCard(url, og);
-      // update title bar with real title
       if(og.title) document.getElementById('ie-title').textContent = og.title + ' \u2014 Internet Explorer';
-    } else {
+    }else{
       ieFallbackUnknown(url, host);
     }
-  } catch(e){
+  }catch(e){
     ieFallbackUnknown(url, host);
   }
 }
 
-/* Pure fallback when OG fetch fails */
-function ieFallbackUnknown(url, host){
-  document.getElementById('ie-page-content').innerHTML = `
-    <div class="ie-card">
-      <div class="ie-card-banner" style="background:#f4f4f4;align-items:center;justify-content:center;display:flex;">
-        <span style="font-size:36px;opacity:0.12;">&#127760;</span>
-      </div>
-      <div class="ie-card-info">
-        <div class="ie-card-top">
-          <div class="ie-card-logo">
-            <img src="https://www.google.com/s2/favicons?domain=${host}&sz=32" width="32" height="32" style="image-rendering:pixelated;" onerror="this.outerHTML='&#127760;'"/>
-          </div>
-          <div class="ie-card-meta">
-            <div class="ie-card-name">${host}</div>
-            <div class="ie-card-url">${url}</div>
-            <div class="ie-card-desc">Preview could not be loaded. This may be due to network restrictions or the site not providing Open Graph metadata.</div>
-          </div>
-        </div>
-        <div class="ie-card-actions">
-          <a class="ie-action-btn" href="${url}" target="_blank">&#128279; Open in New Tab &#8599;</a>
-        </div>
-        <div class="ie-newtab-hint">VC\u00B7OS Internet Explorer v1.0</div>
-      </div>
-    </div>`;
+/* No preview available: a plain card with a link that opens the real site. */
+function ieFallbackUnknown(url, host, disabled){
+  ieBuildCard({host, url, title: host,
+    desc: disabled ? 'This is a retro desktop, not a real browser: external pages are not loaded here, so nothing you type is sent to third-party services. Use the link below to open the site.'
+                   : 'Preview could not be loaded. This may be due to network restrictions or the site not providing Open Graph metadata.'});
 }
 
 /* Main render function */
@@ -1186,7 +1168,7 @@ function ieRenderCard(key, url){
     ${tagsHTML ? `<div class="ie-card-tags">${tagsHTML}</div>` : ''}
     ${statsHTML ? `<div class="ie-card-divider"></div><div class="ie-card-stats">${statsHTML}</div>` : ''}
     ${actsHTML  ? `<div class="ie-card-actions">${actsHTML}</div>` : ''}
-    <div class="ie-newtab-hint">&#8599; Links open in your real browser &mdash; VC\u00B7OS Internet Explorer v1.0</div>`;
+    <div class="ie-newtab-hint">Links open in your real browser. VC\u00B7OS Internet Explorer v1.0</div>`;
   card.appendChild(info);
   el.appendChild(card);
 
@@ -1237,6 +1219,11 @@ function ieOpen(url){
   // Normalize
   if(!url.startsWith('http') && !url.startsWith('about:') && !url.startsWith('#')){
     url = 'https://' + url;
+  }
+  if(!url.startsWith('about:') && !url.startsWith('#')){
+    const safe = safeHttpUrl(url);          // javascript:, data:, file: ... are never opened
+    if(!safe){ showAlert('Only http and https addresses can be opened.'); return; }
+    url = safe;
   }
 
   // Update URL bar + title
@@ -2223,7 +2210,7 @@ function startMatrixEgg(){
     if(++count>20){
       clearInterval(iv);matrixActive=false;
       const end=document.createElement('div');end.className='term-block';
-      end.innerHTML='<span class="t-out" style="display:block;border-top:1px solid #000;padding-top:4px;margin-top:4px;">&#9829; NEURAL MATRIX ONLINE &mdash; WELCOME, '+CONFIG.user.name.toUpperCase()+'.</span>';
+      end.innerHTML='<span class="t-out" style="display:block;border-top:1px solid #000;padding-top:4px;margin-top:4px;">NEURAL MATRIX ONLINE &mdash; WELCOME, '+CONFIG.user.name.toUpperCase()+'.</span>';
       out.appendChild(end);out.scrollTop=out.scrollHeight;
     }
   },80);

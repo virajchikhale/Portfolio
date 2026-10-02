@@ -13,7 +13,7 @@
 <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Viraj Chikhale — AI/ML Engineer"/>
 <meta name="twitter:description" content="Building agentic AI: multi-agent orchestration, RAG and full-stack apps."/>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+<link rel="preload" href="fonts/PressStart2P-latin.woff2" as="font" type="font/woff2" crossorigin/>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -37,7 +37,7 @@
       </div>
       <div class="boot-ver" id="boot-ver-line"></div>
       <div class="boot-skip">
-        <a href="#" id="boot-skip-btn">SKIP &#9654;</a> &middot; <a href="lite.html">PLAIN VERSION</a>
+        <a href="#" id="boot-skip-btn">SKIP</a> &middot; <a href="lite.html">PLAIN VERSION</a>
       </div>
     </div>
   </div>
@@ -51,22 +51,23 @@
   <!-- MENU BAR -->
   <div id="menubar">
     <!-- Apple logo — clicking opens apple dropdown -->
-    <div class="mb-item" id="mb-apple" onclick="mbToggle('mb-apple')">&#63743;
+    <div class="mb-item" id="mb-apple" onclick="mbToggle('mb-apple')"><span class="mb-logo" role="img" aria-label="VC·OS menu">VC</span>
       <div class="mb-dropdown">
-        <div class="dd-row" id="menu-about-item" onclick="showAlert(CONFIG.meta.osName+' v1.0\nBuilt with \u2665 by '+CONFIG.user.name+'\n\n'+CONFIG.user.role+'\nMac OS 1984-inspired portfolio.')">&#9670; About VC&middot;OS</div>
+        <div class="dd-row" id="menu-about-item" onclick="showAlert(CONFIG.meta.osName+' v1.0\nBuilt by '+CONFIG.user.name+'\n\n'+CONFIG.user.role+'\nMac OS 1984-inspired portfolio.')">About VC&middot;OS</div>
         <div class="dd-hr"></div>
-        <div class="dd-row" onclick="openWin('win-about')">&#128100; About Me</div>
-        <div class="dd-row" onclick="openWin('win-skills')">&#9889; Skills</div>
-        <div class="dd-row" onclick="openWin('win-projects')">&#128193; Projects</div>
-        <div class="dd-row" onclick="chatOpen()">&#10024; VC&middot;AI Chat</div>
-        <div class="dd-row" onclick="flowOpen()">&#9889; Flow Monitor</div>
-        <div class="dd-row" onclick="openWin('win-experience')">&#128188; Experience</div>
-        <div class="dd-row" onclick="openWin('win-contact')">&#9993; Contact</div>
-        <div class="dd-row" onclick="openWin('win-ie')">&#127760; Internet Explorer</div>
-        <div class="dd-row" onclick="openResume()">&#128196; Resume</div>
-        <div class="dd-row" onclick="location.href='lite.html'">&#128221; Plain Version</div>
+        <div class="dd-row" onclick="openWin('win-about')">About Me</div>
+        <div class="dd-row" onclick="openWin('win-skills')">Skills</div>
+        <div class="dd-row" onclick="openWin('win-projects')">Projects</div>
+        <div class="dd-row" onclick="chatOpen()">VC&middot;AI Chat</div>
+        <div class="dd-row" onclick="flowOpen()">Flow Monitor</div>
+        <div class="dd-row" onclick="activityOpen()">Activity</div>
+        <div class="dd-row" onclick="openWin('win-experience')">Experience</div>
+        <div class="dd-row" onclick="openWin('win-contact')">Contact</div>
+        <div class="dd-row" onclick="openWin('win-ie')">Internet Explorer</div>
+        <div class="dd-row" onclick="openResume()">Resume</div>
+        <div class="dd-row" onclick="location.href='lite.html'">Plain Version</div>
         <div class="dd-hr"></div>
-        <div class="dd-row" onclick="location.reload()">&#8635; Restart</div>
+        <div class="dd-row" onclick="location.reload()">Restart</div>
       </div>
     </div>
 
@@ -139,6 +140,9 @@
       </div>
       <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="flowOpen()">
         <canvas id="ic7" width="32" height="32"></canvas><span>Flow</span>
+      </div>
+      <div class="dsk-icon" onclick="dskSelect(this)" ondblclick="activityOpen()">
+        <canvas id="ic8" width="32" height="32"></canvas><span>Activity</span>
       </div>
     </div>
 
@@ -235,7 +239,7 @@
         <div class="chat-input-row">
           <input id="chat-in" type="text" maxlength="800" autocomplete="off" placeholder="Ask a question..." onkeydown="chatKey(event)"/>
           <label class="chat-agent" title="Let the model decide which tools to use (slower, more model calls)"><input type="checkbox" id="chat-agent"/> AGENT</label>
-          <button class="mac-btn" id="chat-flow" onclick="flowOpen()" title="Watch how the question is processed">&#9889; FLOW</button>
+          <button class="mac-btn" id="chat-flow" onclick="flowOpen()" title="Watch how the question is processed">FLOW</button>
           <button class="mac-btn inv" id="chat-send" onclick="chatSend()">ASK</button>
         </div>
       </div>
@@ -254,9 +258,10 @@
           <div id="flow-speed" role="group" aria-label="Playback speed">
             <button type="button" data-mode="live">LIVE</button><button type="button" data-mode="2">2&times;</button><button type="button" data-mode="1">1&times;</button><button type="button" data-mode="0.5">&frac12;&times;</button><button type="button" data-mode="step">STEP</button>
           </div>
-          <button class="mac-btn" id="flow-next" type="button" disabled>NEXT &#9654;</button>
-          <button class="mac-btn" id="flow-skip" type="button" disabled>SKIP &#9197;</button>
-          <button class="mac-btn" id="flow-replay" type="button" disabled>&#8634; REPLAY</button>
+          <button class="mac-btn" id="flow-next" type="button" disabled>NEXT</button>
+          <button class="mac-btn" id="flow-skip" type="button" disabled>SKIP</button>
+          <button class="mac-btn" id="flow-replay" type="button" disabled>REPLAY</button>
+          <select id="flow-runs" aria-label="Previous runs from this visit" disabled></select>
           <label class="flow-sync"><input type="checkbox" id="flow-sync" checked/> sync answer</label>
           <label class="flow-sync" title="Let the model decide which tools to call"><input type="checkbox" id="flow-agent"/> agent mode</label>
         </div>
@@ -269,6 +274,26 @@
         </div>
       </div>
       <div class="mac-rsz" onmousedown="rszDown(event,'win-flow')"></div>
+    </div>
+
+    <!-- ── ACTIVITY (aggregate statistics from /api/stats; see activity.js) ── -->
+    <div class="mac-win" id="win-activity" style="width:380px;height:480px;top:60px;left:200px;z-index:23;display:none;">
+      <div class="mac-tb" onmousedown="tbDown(event,'win-activity')">
+        <div class="tb-btn" onclick="closeWin('win-activity')">&#215;</div>
+        <div class="tb-title">Activity</div>
+        <div class="tb-btn" onclick="zoomWin('win-activity')">+</div>
+      </div>
+      <div class="mac-body" style="display:flex;flex-direction:column;overflow:hidden;">
+        <div class="flow-toolbar">
+          <div id="act-window" role="group" aria-label="Time window">
+            <button type="button" data-w="24h">24H</button><button type="button" data-w="7d">7D</button><button type="button" data-w="all">ALL</button>
+          </div>
+          <button class="mac-btn" id="act-refresh" type="button">REFRESH</button>
+        </div>
+        <div id="act-body" class="flow-scroll"></div>
+        <div id="act-foot">Aggregates only. No questions, answers or visitor data are shown or kept here.</div>
+      </div>
+      <div class="mac-rsz" onmousedown="rszDown(event,'win-activity')"></div>
     </div>
 
     <!-- ── EXPERIENCE WINDOW (filled from CONFIG.experience) ── -->
@@ -327,11 +352,11 @@
       </div>
       <!-- Toolbar -->
       <div class="ie-toolbar">
-        <button class="ie-nav-btn" id="ie-back" onclick="ieBack()" title="Back" disabled>&#9664;</button>
-        <button class="ie-nav-btn" id="ie-fwd"  onclick="ieFwd()"  title="Forward" disabled>&#9654;</button>
-        <button class="ie-nav-btn" onclick="ieReload()" title="Reload">&#8635;</button>
-        <button class="ie-nav-btn" onclick="ieHome()"   title="Home">&#8962;</button>
-        <button class="ie-nav-btn" id="ie-fav-toggle" onclick="ieFavToggle()" title="Favorites">&#9733;</button>
+        <button class="ie-nav-btn" id="ie-back" onclick="ieBack()" title="Back" disabled>Back</button>
+        <button class="ie-nav-btn" id="ie-fwd"  onclick="ieFwd()"  title="Forward" disabled>Fwd</button>
+        <button class="ie-nav-btn" onclick="ieReload()" title="Reload">Reload</button>
+        <button class="ie-nav-btn" onclick="ieHome()"   title="Home">Home</button>
+        <button class="ie-nav-btn" id="ie-fav-toggle" onclick="ieFavToggle()" title="Favorites">Favs</button>
         <input  class="ie-url-bar" id="ie-url" type="text" value="about:blank" onkeydown="if(event.key==='Enter')ieNavigate()"/>
         <button class="ie-go-btn"  onclick="ieNavigate()">GO</button>
       </div>
@@ -397,6 +422,10 @@
       <canvas id="dk7" width="36" height="36"></canvas>
       <span class="dk-label">Flow</span>
     </div>
+    <div class="dk-item" id="dk-activity" onclick="toggleWin('win-activity')">
+      <canvas id="dk8" width="36" height="36"></canvas>
+      <span class="dk-label">Activity</span>
+    </div>
     <!--
       ADD YOUR APP:
       <div class="dk-sep"></div>
@@ -422,6 +451,7 @@
     <script src="config.js"></script>
     <script src="ai.js"></script>
     <script src="flow.js"></script>
+    <script src="activity.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

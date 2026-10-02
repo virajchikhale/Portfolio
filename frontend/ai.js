@@ -14,8 +14,9 @@ const AI = {
     try{ localStorage.setItem('vc-ai-mode', this.mode); }catch(e){}
     aiRenderMode();
   },
-  MAX_HISTORY: 12,  // server only uses the last few turns anyway
-  TIMEOUT_MS: 60000,
+  MAX_HISTORY: 6,   // the server only uses the last few turns anyway; sending more can exceed the proxy's body limit
+  MAX_HISTORY_CHARS: 1200,  // per message: a long answer must not blow the request size up
+  TIMEOUT_MS: 90000,  // longer than the server's own run limit, so the server reports the timeout, not the browser
 };
 
 function aiUrl(path){ return ((typeof CONFIG!=='undefined' && CONFIG.apiBase) || '') + path; }
@@ -41,7 +42,7 @@ async function aiAsk(message, onDelta, onSources){
   AI.busy = true;
   const flow = (typeof Flow !== 'undefined') ? Flow : null;
   // In slow "teaching" modes the Flow Monitor can hold the answer back until its animation reaches the LLM stage.
-  const gate = flow ? flow.beginRun() : Promise.resolve();
+  const gate = flow ? flow.beginRun({q: message, mode: AI.mode}) : Promise.resolve();
   let released = false, held = '';
   gate.then(()=>{ released = true; if(held){ const h = held; held = ''; onDelta(h); } });
   const emit = chunk=>{ if(released) onDelta(chunk); else held += chunk; };
@@ -53,7 +54,7 @@ async function aiAsk(message, onDelta, onSources){
       res = await fetch(aiUrl('/api/chat'), {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({message, history: AI.history.slice(-AI.MAX_HISTORY), mode: AI.mode}),
+        body: JSON.stringify({message, mode: AI.mode, history: AI.history.slice(-AI.MAX_HISTORY).map(m=>({role: m.role, content: m.content.slice(0, AI.MAX_HISTORY_CHARS)}))}),
         signal: ctrl.signal,
       });
     }catch(e){
@@ -124,8 +125,11 @@ function aiRenderMode(){
 function aiRenderStatus(){
   const el = document.getElementById('chat-status');
   if(!el) return;
-  el.textContent = AI.online === null ? '○ checking…'
-                 : AI.online ? '● online' : '○ offline';
+  // A drawn dot (CSS) rather than a symbol character, which some platforms render as a colour emoji.
+  const state = AI.online === null ? 'wait' : AI.online ? 'on' : 'off';
+  el.textContent = '';
+  const dot = document.createElement('span'); dot.className = 'st-dot ' + state;
+  el.append(dot, document.createTextNode(AI.online === null ? 'checking' : AI.online ? 'online' : 'offline'));
 }
 
 /* ── Chat window ───────────────────────────────────────── */

@@ -29,6 +29,10 @@ jobs:
         env:
           RUN_LOCAL_EMBEDDING_TESTS: "1"   # real-model semantic + retrieval-quality gate
           EMBEDDING_CACHE_DIR: models
+      - name: Answer-quality evaluation (deterministic layer, both modes)
+        run: python scripts/eval_answers.py   # guardrails, retrieval, citations, leaks; fails the build on any miss
+        env:
+          EMBEDDING_CACHE_DIR: models
       - run: pip-audit -r requirements.txt   # known-vulnerable dependency check
   secrets:
     runs-on: ubuntu-latest
@@ -37,3 +41,20 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: gitleaks/gitleaks-action@v2    # fails the build if an API key is committed
         env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r backend/requirements-dev.txt
+      - uses: actions/cache@v4
+        with:
+          path: backend/models
+          key: fastembed-${{ hashFiles('backend/app/config.py') }}
+      - run: python -c "from fastembed import TextEmbedding; TextEmbedding('sentence-transformers/all-MiniLM-L6-v2', cache_dir='backend/models')"
+      - name: Browser checks (headless Firefox, real backend)
+        run: e2e/run.sh
+        env:
+          EMBEDDING_CACHE_DIR: ${{ github.workspace }}/backend/models
+          HF_HUB_OFFLINE: "1"

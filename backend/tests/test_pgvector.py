@@ -142,3 +142,44 @@ def test_stale_index_is_not_rebuilt_when_ingest_on_startup_is_off():
     with TestClient(create_app(s)) as c:
         rag = c.get("/api/health").json()["rag"]
         assert rag["enabled"] is False and rag["reason"] == "dimension_mismatch"  # explicit opt-out: stay loud
+
+
+# ── run telemetry on real Postgres ───────────────────────────────────────
+async def test_pg_run_store_roundtrip_and_prune(store):
+    import time
+
+    from app.telemetry import PgRunStore, RunSummary
+
+    runs = PgRunStore(store.pool)
+    await runs.init()
+    now = time.time()
+    mk = lambda ts, **kw: RunSummary(ts=ts, mode="agent", requested="agent", outcome="ok", total_ms=1234.5,  # noqa: E731
+                                     ttft_ms=210.0, steps=3, tool_calls=2, sources=4, stage_ms={"embed": 12.5},
+                                     model="m", question_len=9, **kw)
+    await runs.record(mk(now - 10, question="kept only if opted in"))
+    await runs.record(mk(now - 100 * 86400))
+    rows = await runs.since(now - 3600)
+    assert len(rows) == 1 and rows[0]["steps"] == 3 and rows[0]["stage_ms"] == {"embed": 12.5}
+    assert rows[0]["question"] == "kept only if opted in" and abs(rows[0]["ts"] - (now - 10)) < 1
+    assert [r["question_len"] for r in await runs.recent(10)] == [9, 9]
+    assert await runs.prune(now - 30 * 86400) == 1 and len(await runs.recent(10)) == 1
+
+
+def test_stats_survive_an_app_restart_on_postgres():
+    import psycopg
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    with psycopg.connect(URL, autocommit=True) as c:
+        c.execute("DROP TABLE IF EXISTS runs")
+    s = Settings(llm_provider="fake", vector_store="pgvector", embedding_provider="fake", database_url=URL,
+                 embedding_dim=64, rag_min_score=0.15, rate_limit_per_minute=100, _env_file=None)
+    with TestClient(create_app(s)) as c:
+        c.post("/api/chat", json={"message": "What did he do at Inorbvict?"})
+        c.post("/api/chat", json={"message": "hello", "mode": "agent"})
+        c.portal.call(c.app.state.telemetry.drain)
+        assert c.get("/api/stats").json()["runs"]["total"] == 2
+    with TestClient(create_app(s)) as c2:  # a fresh process: nothing in memory
+        stats = c2.get("/api/stats?window=all").json()
+    assert stats["runs"]["total"] == 2 and stats["runs"]["by_mode"] == {"pipeline": 1, "agent": 1}

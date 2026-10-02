@@ -1,3 +1,11 @@
+/* Press Start 2P (SIL OFL 1.1, see fonts/OFL.txt), served from this origin: no request to Google Fonts, so a visitor's
+   address is never sent to a third party just to draw the UI. */
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/PressStart2P-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/PressStart2P-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
 /* ─── RESET ───────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -106,10 +114,12 @@ body{
 }
 .mb-item:hover,.mb-item.open{background:#000;color:#fff;}
 #mb-apple{
-  font-size:15px;line-height:1;
+  font-size:8px;line-height:1;
   border-right:1px solid #ccc;
   padding:0 10px;
 }
+/* The OS mark is drawn with CSS: the Apple glyph (U+F8FF) is only a letter on macOS and a hex box everywhere else. */
+.mb-logo{display:inline-block;border:2px solid currentColor;padding:2px 3px 1px;font-size:7px;line-height:1;}
 .mb-sep-v{width:1px;background:#ccc;margin:3px 0;}
 .mb-right{margin-left:auto;padding:0 10px;font-size:7px;display:flex;align-items:center;pointer-events:none;}
 
@@ -624,13 +634,13 @@ body{
   flex-shrink:0;
 }
 .ie-nav-btn{
-  width:22px;height:18px;
+  min-width:22px;height:18px;padding:0 5px;
   border:1.5px solid #000;
   background:#fff;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  font-size:10px;
-  font-family:monospace;
+  font-size:6px;
+  font-family:'Press Start 2P',monospace;
   flex-shrink:0;
 }
 .ie-nav-btn:hover{background:#000;color:#fff;}
@@ -1237,14 +1247,14 @@ body[data-theme="dark"] .chat-sources{ color:#999; border-top-color:#555; }
 .fl-box{fill:#fff;stroke:#000;stroke-width:2;}
 .fl-label{font-family:'Press Start 2P',monospace;font-size:8.5px;text-anchor:middle;fill:#000;}
 .fl-sub{font-family:'Press Start 2P',monospace;font-size:6.5px;text-anchor:middle;fill:#666;}
-.fl-mark{font-family:monospace;font-size:11px;font-weight:bold;text-anchor:middle;fill:#000;}
+.fl-mark{font-family:'Press Start 2P',monospace;font-size:5.5px;text-anchor:end;fill:#000;}
 .fl-node{cursor:pointer;outline:none;}
 .fl-node:focus-visible .fl-box{stroke-dasharray:3 2;}
 .fl-node.sel .fl-box{stroke-width:3.5;}
 .fl-node.active .fl-box{fill:#000;}
 .fl-node.active .fl-label,.fl-node.active .fl-mark{fill:#fff;}
 .fl-node.active .fl-sub{fill:#ccc;}
-.fl-node.active{animation:fl-pulse .9s steps(2,end) infinite;}
+
 @keyframes fl-pulse{50%{opacity:.78;}}
 .fl-node.ok .fl-box{stroke-width:3;}
 .fl-node.skipped .fl-box{stroke:#999;stroke-dasharray:4 3;}
@@ -1293,7 +1303,7 @@ body[data-theme="dark"] .fd-bar b{background:#e8e8e8;box-shadow:0 0 0 1px #111;}
 body[data-theme="dark"] .fd-text{background:#1e1e1e;color:#ccc;border-color:#555;}
 body[data-theme="dark"] .fd-row{border-bottom-color:#444;}
 body[data-theme="dark"] #flow-log{border-top-color:#444;}
-@media (prefers-reduced-motion: reduce){ .fl-node.active{animation:none;} }
+
 .chat-input-row .mac-btn{padding:7px 8px;}
 .fd-hint{color:#000;background:#f3f3f3;border:1px dashed #000;padding:4px 6px;}
 body[data-theme="dark"] .fd-hint{color:#e8e8e8;background:#1e1e1e;border-color:#aaa;}
@@ -1301,3 +1311,72 @@ body[data-theme="dark"] .fd-hint{color:#e8e8e8;background:#1e1e1e;border-color:#
 .fd-sub{font-size:7px;margin:8px 0 3px;text-decoration:underline;}
 .chat-agent{font-size:6px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;}
 .chat-agent input{margin:0;}
+
+/* status dot: drawn, not a glyph */
+.st-dot{display:inline-block;width:6px;height:6px;margin-right:5px;border:1px solid currentColor;vertical-align:middle;}
+.st-dot.on{background:currentColor;}
+.st-dot.wait{animation:fl-pulse .9s steps(2,end) infinite;}
+
+/* ── Flow Monitor motion: nodes glide, fade in/out, and the active stage glows ─────────────── */
+.fl-node{transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;}
+.fl-edge{transition:opacity .22s ease;}
+.fl-node.fl-enter,.fl-node.fl-leave,.fl-edge.fl-enter,.fl-edge.fl-leave{opacity:0;}
+.fl-node.fl-leave{pointer-events:none;}
+.fl-node.active{animation:fl-glow 1.4s ease-in-out infinite;}
+@keyframes fl-glow{0%,100%{filter:drop-shadow(0 0 0 rgba(0,0,0,0));}50%{filter:drop-shadow(0 0 5px rgba(0,0,0,.6));}}
+body[data-theme="dark"] .fl-node.active{animation-name:fl-glow-dark;}
+@keyframes fl-glow-dark{0%,100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0));}50%{filter:drop-shadow(0 0 5px rgba(255,255,255,.7));}}
+.fl-packet{filter:drop-shadow(0 0 3px rgba(0,0,0,.5));}
+body[data-theme="dark"] .fl-packet{filter:drop-shadow(0 0 3px rgba(255,255,255,.6));}
+#flow-graph{position:relative;}
+#flow-graph svg{transition:opacity .2s ease;}
+@media (prefers-reduced-motion: reduce){
+  .fl-node,.fl-edge,#flow-graph svg{transition:none;}
+  .fl-node.active,.st-dot.wait{animation:none;}
+}
+
+/* ── Activity window ─────────────────────────────────── */
+#act-window{display:flex;}
+#act-window button{font-family:'Press Start 2P',monospace;font-size:7px;border:2px solid #000;margin-left:-2px;padding:7px 8px;background:#fff;color:#000;cursor:pointer;}
+#act-window button:first-child{margin-left:0;}
+#act-window button.on{background:#000;color:#fff;}
+#act-body{padding:8px 12px;}
+.act-sec{margin-bottom:12px;}
+.act-h{font-size:7px;text-decoration:underline;margin-bottom:5px;}
+.act-kv{display:flex;justify-content:space-between;gap:10px;font-size:7px;line-height:2;border-bottom:1px dotted #bbb;}
+.act-k{color:#444;}
+.act-row{display:grid;grid-template-columns:78px 1fr 54px;gap:8px;align-items:center;font-size:7px;line-height:2;}
+.act-bar{height:7px;border:1px solid #000;background:#fff;}
+.act-bar i{display:block;height:100%;background:#000;transition:width .35s ease;}
+.act-rv{text-align:right;color:#444;}
+.act-note{font-size:7px;line-height:2;color:#444;padding:6px 0;}
+#act-foot{font-size:6px;line-height:1.8;color:#666;padding:6px 12px;border-top:2px solid #000;background:#fff;}
+body[data-theme="dark"] #act-window button{background:#1e1e1e;color:#e8e8e8;border-color:#aaa;}
+body[data-theme="dark"] #act-window button.on{background:#e8e8e8;color:#111;}
+body[data-theme="dark"] .act-bar{background:#111;border-color:#aaa;}
+body[data-theme="dark"] .act-bar i{background:#e8e8e8;}
+body[data-theme="dark"] .act-k,body[data-theme="dark"] .act-rv,body[data-theme="dark"] .act-note{color:#aaa;}
+body[data-theme="dark"] .act-kv{border-bottom-color:#444;}
+body[data-theme="dark"] #act-foot{background:#111;color:#999;border-top-color:#444;}
+@media (prefers-reduced-motion: reduce){ .act-bar i{transition:none;} }
+
+/* ── Form controls in the theme (no native blue ticks or system dropdowns) ─────────────── */
+.flow-sync input,.chat-agent input{
+  -webkit-appearance:none;appearance:none;width:10px;height:10px;margin:0;display:inline-block;vertical-align:middle;
+  border:2px solid #000;background:#fff;cursor:pointer;flex:none;
+}
+.flow-sync input:checked,.chat-agent input:checked{background:#000;box-shadow:inset 0 0 0 2px #fff;}
+.flow-sync input:focus-visible,.chat-agent input:focus-visible,#flow-runs:focus-visible{outline:2px dashed #000;outline-offset:2px;}
+#flow-runs{
+  -webkit-appearance:none;appearance:none;flex:1 1 150px;min-width:0;max-width:100%;
+  font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.4;color:#000;
+  border:2px solid #000;border-radius:0;background:#fff;padding:6px 20px 6px 8px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,#000 50%),linear-gradient(135deg,#000 50%,transparent 50%);
+  background-position:calc(100% - 11px) 55%,calc(100% - 6px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+#flow-runs:disabled{opacity:.45;cursor:default;}
+body[data-theme="dark"] .flow-sync input,body[data-theme="dark"] .chat-agent input{border-color:#e8e8e8;background:#111;}
+body[data-theme="dark"] .flow-sync input:checked,body[data-theme="dark"] .chat-agent input:checked{background:#e8e8e8;box-shadow:inset 0 0 0 2px #111;}
+body[data-theme="dark"] .flow-sync input:focus-visible,body[data-theme="dark"] .chat-agent input:focus-visible,body[data-theme="dark"] #flow-runs:focus-visible{outline-color:#e8e8e8;}
+body[data-theme="dark"] #flow-runs{color:#e8e8e8;border-color:#aaa;background-color:#1e1e1e;
+  background-image:linear-gradient(45deg,transparent 50%,#e8e8e8 50%),linear-gradient(135deg,#e8e8e8 50%,transparent 50%);}

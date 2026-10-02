@@ -13,7 +13,7 @@ const CONFIG = {
   meta: {
     osName: 'VC\u00B7OS',
     version: '1.0',
-    year: '2025',
+    year: String(new Date().getFullYear()),
   },
 
   /* ── Personal info ───────────────────────────────────────── */
@@ -21,7 +21,7 @@ const CONFIG = {
     name: 'Viraj Chikhale',
     role: 'AI/ML Engineer',
     tagline: 'Building Agentic AI',
-    location: 'Pune, India \uD83C\uDDEE\uD83C\uDDF3',
+    location: 'Pune, India',
     bio: 'Software Engineer with 2+ years of experience specializing in AI-driven applications, multi-agent orchestration, and full-stack development. Building the next layer of AI \u2014 where models think, plan & act.',
     email: 'chikhaleviraj.work@gmail.com',
     promptUser: 'viraj',
@@ -45,6 +45,10 @@ const CONFIG = {
   ],
   contactEndpoint: '',
   proxyUrl: '',
+  /* Live previews in the Internet Explorer window send the address a visitor types to a third-party CORS proxy,
+     so they are OFF by default (the window then shows built-in cards and an "open in a new tab" link). If you turn this
+     on, also allow `img-src https:` and the proxy host in `connect-src` in frontend/nginx.conf. */
+  ieLivePreview: false,
 
   /* ── Experience (window is empty until you fill this in) ──────
      { role:'AI Engineer', company:'Company', period:'2023 \u2013 Present', location:'Pune',
@@ -61,36 +65,36 @@ const CONFIG = {
 
   /* ── Social / link badges ────────────────────────────────── */
   links: [
-    { label: '\uD83D\uDD17 GitHub', url: 'https://github.com/virajchikhale', action: 'ie' },
-    { label: '\uD83D\uDCBC LinkedIn', url: 'https://linkedin.com/in/viraj-chikhale-024a92201/', action: 'ie' },
-    { label: '\u2709\uFE0F Email', url: null, action: 'contact' },
+    { label: 'GitHub', url: 'https://github.com/virajchikhale', action: 'ie' },
+    { label: 'LinkedIn', url: 'https://linkedin.com/in/viraj-chikhale-024a92201/', action: 'ie' },
+    { label: 'Email', url: null, action: 'contact' },
     { label: '>_ Terminal', url: null, action: 'terminal' },
   ],
 
   /* ── Skills ──────────────────────────────────────────────── */
   skills: [
     {
-      category: '\uD83E\uDD16 AI / ML',
+      category: 'AI / ML',
       items: ['LangChain', 'LangGraph', 'CrewAI', 'RAG', 'NLP', 'Prompt Eng.', 'Scikit-learn'],
     },
     {
-      category: '\uD83D\uDD0C AGENTS & TOOLS',
+      category: 'AGENTS & TOOLS',
       items: ['Multi-Agent Systems', 'Tool Calling', 'Agent Workflows', 'Memory Handling', 'Task Routing'],
     },
     {
-      category: '\uD83D\uDCBB LANGUAGES',
+      category: 'LANGUAGES',
       items: ['Python', 'JavaScript', 'C++', 'PHP', 'SQL'],
     },
     {
-      category: '\uD83C\uDF10 WEB & BACKEND',
+      category: 'WEB & BACKEND',
       items: ['FastAPI', 'React', 'Next.js', 'HTML5', 'CSS3', 'Bootstrap', 'AJAX', 'jQuery'],
     },
     {
-      category: '\uD83D\uDDC4 DATABASES',
+      category: 'DATABASES',
       items: ['PostgreSQL', 'MySQL', 'Oracle'],
     },
     {
-      category: '\uD83D\uDEE0 TOOLS & PLATFORMS',
+      category: 'TOOLS & PLATFORMS',
       items: ['Git', 'GitHub', 'Tableau', 'Power BI', 'Streamlit', 'VS Code'],
     },
   ],
@@ -105,67 +109,61 @@ const CONFIG = {
   ─────────────────────────────────────────────────────────── */
   projects: [
     {
-      icon: '\uD83E\uDD16',
       name: 'VC\u00B7OS Portfolio',
       desc: 'Mac OS 1984-inspired interactive portfolio with draggable windows, terminal, dock, menu bar & IE browser \u2014 hand-coded from scratch.',
       tags: ['HTML', 'CSS', 'JavaScript', 'Canvas'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
     {
-      icon: '\uD83D\uDD17',
       name: 'Agentic AI Workflow Engine',
       desc: 'Multi-agent orchestration system with task routing, tool calling, and memory handling using LangGraph/CrewAI patterns and intelligent fallback mechanisms.',
       tags: ['Python', 'LangChain', 'LangGraph', 'CrewAI'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
     {
-      icon: '\uD83D\uDCCD',
       name: 'Context-Aware Place Recommendations',
       desc: 'Intelligent recommendation engine using NLP and geospatial data to suggest places based on user mood, preferences, and location — achieving 85% query-match accuracy.',
       tags: ['Python', 'NLP', 'Geospatial Analysis', 'Scikit-learn'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
     {
-      icon: '\uD83C\uDFAC',
       name: 'Movie Recommendation System',
       desc: 'Hybrid recommendation system combining collaborative and content-based filtering with word embeddings. Deployed as an interactive Streamlit app with 90%+ user satisfaction.',
       tags: ['Python', 'Pandas', 'NumPy', 'Scikit-learn', 'Streamlit'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
     {
-      icon: '\uD83D\uDCCA',
       name: 'Attendance Management System',
       desc: 'Enterprise-level attendance tracking system managing 2000+ students and 60+ teachers across 7 branches, with automated Excel/PDF report generation.',
       tags: ['HTML', 'CSS', 'JavaScript', 'PHP', 'MySQL', 'AJAX'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
     {
-      icon: '\uD83D\uDCDA',
       name: 'Library Management System',
       desc: 'Custom library system for a 2000+ student college with department-wise book distribution, automated fine calculations, and borrowing pattern reports.',
       tags: ['HTML', 'CSS', 'JavaScript', 'PHP', 'MySQL', 'AJAX'],
       links: [
-        { label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
       ],
     },
   ],
 
   /* ── IE browser favorites ─────────────────────────────────── */
   favorites: [
-    { cat: 'SOCIAL', label: '\uD83D\uDC08 GitHub', url: 'https://github.com/virajchikhale' },
-    { cat: 'SOCIAL', label: '\uD83D\uDCBC LinkedIn', url: 'https://linkedin.com/in/viraj-chikhale-024a92201/' },
-    { cat: 'WEB', label: '\uD83D\uDD0D Google', url: 'https://google.com' },
-    { cat: 'WEB', label: '\uD83D\uDCDA Wikipedia', url: 'https://wikipedia.org' },
+    { cat: 'SOCIAL', label: 'GitHub', url: 'https://github.com/virajchikhale' },
+    { cat: 'SOCIAL', label: 'LinkedIn', url: 'https://linkedin.com/in/viraj-chikhale-024a92201/' },
+    { cat: 'WEB', label: 'Google', url: 'https://google.com' },
+    { cat: 'WEB', label: 'Wikipedia', url: 'https://wikipedia.org' },
   ],
 
   /* ── Desktop marquee text ──────────────────────────────────── */

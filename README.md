@@ -50,6 +50,55 @@ Backend only: `cd backend && pip install -r requirements-dev.txt && pytest && uv
 * If retrieval fails (DB/embeddings down) chat keeps working from core facts, without sources; `/api/health` shows `rag.enabled`.
 * Never put private data (phone, address) in `data/`: the public chatbot can quote anything in it.
 
+## Testing: five layers
+| Layer | Command | What it proves |
+|---|---|---|
+| Backend unit + API | `cd backend && pytest -q` | tools, agent loop, MCP, guardrails, telemetry, rate limits, failure paths, disconnect cancellation (real uvicorn) |
+| Real Postgres | `TEST_DATABASE_URL=postgresql://... pytest` | pgvector store, run store, stats surviving a restart, index self-healing |
+| Real embedding model | `RUN_LOCAL_EMBEDDING_TESTS=1 pytest` | semantic retrieval, hybrid quality gate, golden set |
+| Answer quality | `python scripts/eval_answers.py [--live]` | facts, refusals, grounded numbers, citations, leaks, in both modes |
+| Browser end to end | `e2e/run.sh` | the UI in headless Firefox: ~160 checks (see `e2e/README.md`) |
+
+CI runs all but `--live` (it needs a key). The harness for the answer-quality layer is tested with deliberately bad answers.
+
+## Activity, telemetry and privacy
+Every question leaves one small summary row (Postgres when available, a bounded in-memory store otherwise): mode, outcome,
+latency, time to first text, model calls, tool calls, number of sources, per-stage timings, whether the agent fell back.
+**Not stored by default:** the question, the answer, IP address or any identifier (`TELEMETRY_STORE_QUESTIONS=false`; opt in
+only to find gaps in your corpus). Rows older than `RUN_RETENTION_DAYS` (30) are pruned.
+
+| Where | What |
+|---|---|
+| **Activity** window (dock, menu, `stats` in the terminal) | public aggregates from `GET /api/stats?window=24h\|7d\|all`: counts, p50/p95 latency, stage medians, answered-with-sources %, agent steps, fallbacks. Auto-refreshes only while open |
+| `GET /api/admin/runs` | recent run summaries (and the question text if you opted in). **Does not exist** unless `ADMIN_TOKEN` is set; then needs `Authorization: Bearer <token>` |
+
+Writes are fire-and-forget: a slow or broken database can never delay or fail a chat answer. A visitor who closes the tab
+is recorded as `cancelled`, and the model calls their run already made are still charged to the daily budget.
+
+## Evaluation: measure answer quality, don't assume it
+```bash
+python scripts/eval_answers.py              # deterministic layer, fake model: free, fast, runs in CI
+python scripts/eval_answers.py --live       # + facts, "I don't know", grounded numbers with the REAL model (costs calls)
+python scripts/eval_answers.py --live --modes agent --only edu-1,exp-1 --json out.json
+python scripts/eval_retrieval.py            # retrieval only: recall, MRR, off-topic leakage, recommended RAG_MIN_SCORE
+```
+`backend/evals/golden.json` has 25 cases (facts, follow-up, unknowns, off-topic, attacks) run in **both** modes.
+* **Deterministic checks (CI):** guardrail blocks, the expected source is retrieved, off-topic gets no sources, every `[n]`
+  citation points at a real source, nothing secret leaks.
+* **Live checks:** the answer contains the facts, admits when it does not know, declines off-topic, and **every number in the
+  answer appears in the sources the model was given** (a hallucination guard). `--min-pass` (default 85%) sets the bar.
+* The harness is itself tested: `tests/test_eval_harness.py` feeds it deliberately bad answers (invented citation, leaked key,
+  made-up number, missing refusal) and checks each is caught.
+
+## Input guardrails: what they are and are not
+Regex patterns are a cheap first filter, **not the security boundary**. The boundary is architectural: no secret is reachable
+from the prompt, tools are read-only, output is rendered as text. The patterns therefore target *intent to override or
+extract*, not mere mentions, so honest questions ("does he manage secrets in Docker?") are not refused. They also undo common
+obfuscation (leetspeak, lookalike letters, spaced-out letters, zero-width characters) and cover Spanish, French, German,
+Portuguese, Hindi and Marathi overrides. `backend/evals/redteam.json` holds 35 attacks that must be blocked, 14 legitimate
+questions that must **not** be, and 3 documented gaps (base64, translate-and-obey, role-play framing) that rely on the
+architecture. A guardrail that over-blocks is a bug too, and the suite checks both directions.
+
 ## Agent mode: a model that decides what to do
 Tick **AGENT** in the chat window (or the Flow Monitor), or type `agent` in the terminal. Instead of the fixed
 retrieve→answer chain, the model runs a loop (LangGraph, `backend/app/agent/graph.py`) and chooses its own tools:
@@ -75,6 +124,10 @@ overall timeout, and loop detection (an identical repeated call is refused). On 
 tools**, so it has to answer. If the browser disconnects the whole run is cancelled. Every function call gets exactly one
 response (Gemini requires it), and extra parallel calls beyond 3 get an error instead of running.
 
+**If the agent fails before answering anything** (for example a model that rejects tool calling), the server answers with
+the fast pipeline instead of an error (`AGENT_FALLBACK=true`). The Flow Monitor shows the failed step, then the pipeline stages
+fade in, and the run is recorded as a fallback.
+
 **Cost and fallback:** an agent run makes up to `AGENT_MAX_STEPS` model calls and is charged to the daily budget accordingly.
 If the budget cannot absorb a worst-case run, the question is answered by the fast pipeline instead and the Flow Monitor says
 so. Pipeline mode stays the default.
@@ -82,6 +135,10 @@ so. Pipeline mode stays the default.
 **Security:** tool arguments are untrusted input (strict type/length/key validation, injection screening, skill names must be
 in the catalog); tool results and user text are labelled as data in the prompt; no tool writes, sends, deletes, fetches a URL
 or reads a secret.
+
+The graph is **reconciled, never rebuilt**: switching modes keeps the rate-limit and guardrails nodes in place, fades the
+others out and in, glides nodes to new positions when the window resizes, and respects `prefers-reduced-motion`.
+Each visit keeps its last 8 runs in memory (never stored) so you can replay any of them from the monitor.
 
 In the **Flow Monitor** the graph grows as the model decides (THINK 1 → LOAD SKILL → THINK 2 → SEARCH → ANSWER). Click a
 tool to see its arguments, what the model received, and the whole retrieval breakdown (vector scores, keyword matches) nested
@@ -139,6 +196,16 @@ trace inside the error body, so the UI can show where it was stopped.
 **What a trace never contains:** the system prompt, guardrail patterns (a block just says "blocked by input guardrail"),
 API keys or per-IP rate-limit counters. The UI inserts every value with `textContent`, so hostile text is inert. A hidden
 browser tab never delays a chat answer, and closing the monitor releases any held answer immediately.
+
+## Frontend privacy and security
+* **No third-party requests** by default: the pixel font is self-hosted (`frontend/fonts`, SIL OFL), and the Internet Explorer
+  window does not fetch live previews unless you set `ieLivePreview: true` in `config.js` (it would send typed addresses to a
+  CORS proxy). The CSP allows only same-origin connections and fonts.
+* Everything from a network response is inserted with `textContent`, never `innerHTML`; only `http(s)` addresses can be opened;
+  the terminal escapes what the visitor types. Each of these has a regression test with hostile input.
+* The UI uses no emoji: labels are plain words, status marks are drawn with CSS, icons are pixel art. A test scans every
+  window, label and tooltip for pictographs.
+* Blocked site data (some browsers) cannot stop the OS from booting.
 
 ## Troubleshooting retrieval (RAG)
 Symptoms: the bot says "I don't have details about his experience", answers show no **Sources** line, or the Flow Monitor
@@ -221,4 +288,4 @@ Pattern guardrails are a speed bump, not a wall — the architectural limits abo
 2. ✅ Terminal `ask` / VC·AI window streaming from `/api/chat` (`frontend/ai.js`; replies rendered with `textContent` only)
 3. ✅ RAG over `backend/data/*.md` (pgvector, HNSW) with inline citations and a sources line in the UI
 4. ✅ Agent mode (LangGraph tool loop, `load_skill`, read-only tools) + MCP server (stdio and HTTP)
-5. Evals (golden Q&A in CI) + trace viewer ("Agent Monitor" window)
+5. ✅ Run telemetry + Activity window, answer-quality evals (golden set + red team) in CI, smooth Flow Monitor, run history

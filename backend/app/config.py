@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # sent INSTEAD of the budget (the API rejects both together).
     llm_thinking_level: Literal["minimal", "low", "medium", "high"] | None = None
     llm_temperature: float = Field(0.3, ge=0, le=2)
-    llm_timeout_s: float = Field(30, gt=0)
+    llm_timeout_s: float = Field(60, gt=0)  # pipeline mode: wall-clock limit for the whole model call
 
     # ── RAG (retrieval) ─────────────────────────────────────────────────────
     # local = fastembed (ONNX, CPU, no API/quota, content never leaves your machine); gemini = hosted; fake = tests
@@ -74,6 +74,8 @@ class Settings(BaseSettings):
 
     # ── Agent mode (tool-calling loop, see app/agent) ────────────────────────
     agent_enabled: bool = True
+    # If the agent fails before answering anything, answer with the fast pipeline instead of showing an error.
+    agent_fallback: bool = True
     agent_max_steps: int = Field(4, ge=1, le=10)  # model calls per question (each may request tools)
     agent_max_tool_calls: int = Field(6, ge=1, le=20)  # tool executions per question
     agent_tool_timeout_s: float = Field(15, gt=0)
@@ -85,6 +87,14 @@ class Settings(BaseSettings):
     mcp_rate_limit_per_minute: int = Field(60, ge=1)  # per client IP; a single MCP interaction is several HTTP calls
     mcp_rate_limit_per_day: int = Field(2000, ge=1)
     mcp_allowed_hosts: str = ""  # comma-separated Host headers accepted behind a real hostname, e.g. "api.example.com"
+
+    # ── Telemetry: one small summary row per run, for the activity view and for debugging ───────────────────
+    # Stored WITHOUT the visitor's question or the answer unless TELEMETRY_STORE_QUESTIONS=true (privacy by default).
+    telemetry_enabled: bool = True
+    telemetry_store_questions: bool = False
+    run_retention_days: int = Field(30, ge=1, le=365)
+    admin_token: SecretStr | None = None  # enables GET /api/admin/runs (Bearer); unset = the endpoint does not exist
+    read_rate_limit_per_minute: int = Field(60, ge=1)  # per client IP, for the read-only stats endpoints
 
     # ── Guardrails / abuse protection ───────────────────────────────────────
     max_input_chars: int = Field(800, ge=1)

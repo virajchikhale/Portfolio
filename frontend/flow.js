@@ -71,7 +71,8 @@ const Flow = {
   mode: 'live',          // live | 2 | 1 | 0.5 | step
   sync: true,            // hold the chat answer until the animation reaches the LLM stage (teaching modes only)
   BASE_DWELL: 1000,      // ms a stage stays on screen at 1x
-  cur: null,             // current/last run: {events:[], done:false}
+  cur: null,             // current/last run: {events:[], done:false, info:{q, mode}, at}
+  runs: [],              // this visit's recent runs (newest first). Memory only: never stored, never sent anywhere
   last: null,            // last completed run (for replay)
   nodes: {},             // id -> {status, dur, detail, data}
   token: 0,              // bumps to cancel a running player
@@ -116,9 +117,9 @@ const Flow = {
   travel(){ return this.hurry() ? 150 : Math.max(150, this.BASE_DWELL * 0.35 / this.factor()); },
 
   /* ── run lifecycle (called from ai.js) ─────────────────────── */
-  beginRun(){
+  beginRun(info){
     this.token++;
-    this.cur = {events: [], done: false};
+    this.cur = {events: [], done: false, info: info || {}, at: new Date()};
     this.queue = []; this.playing = false; this.skipping = false;
     if(this._more){ const r = this._more; this._more = null; r(); }
     this._resetVisuals();
@@ -147,7 +148,10 @@ const Flow = {
   endRun(){
     if(!this.cur) return;
     this.cur.done = true;
-    if(this.cur.events.length) this.last = this.cur;
+    if(this.cur.events.length){
+      this.last = this.cur;
+      if(!this.cur.replay){ this.runs.unshift(this.cur); this.runs.length = Math.min(this.runs.length, 8); this.renderRuns(); }
+    }
     if(this._more){ const r = this._more; this._more = null; r(); }
     this._kick();
   },
@@ -160,11 +164,12 @@ const Flow = {
     this.renderControls();
   },
   next(){ if(this._step){ const r = this._step; this._step = null; r(); this.renderControls(); } },
-  replay(){
-    if(!this.last) return;
+  replay(run){
+    run = run || this.last;
+    if(!run) return;
     this.token++;
-    this.cur = {events: this.last.events.slice(), done: true, replay: true};
-    this.queue = this.last.events.slice(); this.playing = false; this.skipping = false;
+    this.cur = {events: run.events.slice(), done: true, replay: true, info: run.info};
+    this.queue = run.events.slice(); this.playing = false; this.skipping = false;
     this._gate = {open: true, waiters: []};
     this._resetVisuals();
     this._kick();
@@ -210,7 +215,7 @@ const Flow = {
         const evt = this.queue.shift();
         if(evt.phase === 'start'){
           if(this.mode === 'step' && !this.skipping){
-            this._status('press NEXT ▶ for: ' + (evt.label || evt.id));
+            this._status('press NEXT for: ' + (evt.label || evt.id));
             await new Promise(res=>{ this._step = res; this.renderControls(); });
             if(token !== this.token) return;
           }
@@ -245,6 +250,12 @@ const Flow = {
     if(evt.phase === 'meta'){
       // Run-level facts from the server: which graph to draw, and whether agent mode fell back to the pipeline.
       if(evt.mode === 'agent' && this.kind !== 'agent'){ this.kind = 'agent'; this.dyn = []; if(this.svg) this.build(); }
+      else if(evt.mode === 'pipeline' && this.kind === 'agent'){
+        // The agent could not answer and the server fell back to the fast pipeline: the agent nodes fade out and the
+        // pipeline stages fade in (reconciled, not rebuilt). Their log lines stay, so the failed step is not hidden.
+        Object.keys(this.nodes).forEach(id=>{ if(/^(step|tool)_\d+$/.test(id)) delete this.nodes[id]; });
+        this.kind = 'pipeline'; this.dyn = []; if(this.svg) this.build();
+      }
       this._note = evt.note || null;
       this._status();
       return;
@@ -278,7 +289,7 @@ const Flow = {
     if(evt.t != null) this._totalMs = Math.max(this._totalMs || 0, evt.t);
   },
   _refreshSel(){
-    if(this.svg) this.svg.querySelectorAll('.fl-node').forEach(g=>g.classList.toggle('sel', g.dataset.id === this.selected));
+    if(this.svg) this.svg.querySelectorAll('.fl-node:not(.fl-leave)').forEach(g=>g.classList.toggle('sel', g.dataset.id === this.selected));
   },
   _status(msg){
     const el = document.getElementById('flow-status'); if(!el) return;
@@ -305,76 +316,120 @@ const Flow = {
   },
 
   /* ── view: graph ──────────────────────────────────────────── */
-  build(){
-    const host = document.getElementById('flow-graph'); if(!host) return;
-    const w = document.getElementById('win-flow').clientWidth || 640;
-    this.layout = w < 520 ? 'tall' : 'wide';
-    const nodes = this.nodeList(), L = this.layoutFor(nodes);
+  /* The graph is RECONCILED, never torn down: nodes present in both the old and the new graph stay where they are (or
+     glide to their new position), removed ones fade out, new ones fade in. build(true) is the one hard rebuild, used
+     only for first paint. This is what keeps switching between pipeline and agent mode, and an agent growing step
+     by step, smooth instead of flashing. */
+  _makeShell(host){
     host.textContent = '';
-    host.dataset.layout = this.layout;
     const svg = document.createElementNS(SVGNS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${L.w} ${L.h}`);
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', this.kind === 'agent' ? 'Agent loop: guardrails, then think and tool steps' : 'Pipeline: rate limit, guardrails, embed, vector and keyword search, fuse, prompt, LLM');
     const defs = document.createElementNS(SVGNS, 'defs');
     defs.innerHTML = '<marker id="fl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="fl-ah"/></marker>';
     svg.appendChild(defs);                                   // static literal, no user data
-    nodes.forEach(nd=>nd.preds.forEach(p=>{
-      const path = document.createElementNS(SVGNS, 'path');
-      path.setAttribute('d', L.paths[p+'>'+nd.id]);
-      path.setAttribute('class', 'fl-edge'); path.setAttribute('marker-end', 'url(#fl-arrow)');
-      path.dataset.edge = p+'>'+nd.id;
-      svg.appendChild(path);
-    }));
-    nodes.forEach(nd=>{
-      const [x, y] = L.pos[nd.id];
-      const g = document.createElementNS(SVGNS, 'g');
-      g.setAttribute('class', 'fl-node idle'); g.dataset.id = nd.id;
-      g.setAttribute('transform', `translate(${x},${y})`);
-      g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', nd.label);
-      const r = document.createElementNS(SVGNS, 'rect'); r.setAttribute('width', 124); r.setAttribute('height', 44); r.setAttribute('class', 'fl-box');
-      const t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', 62); t.setAttribute('y', 19); t.setAttribute('class', 'fl-label'); t.textContent = nd.label;
-      const s = document.createElementNS(SVGNS, 'text'); s.setAttribute('x', 62); s.setAttribute('y', 35); s.setAttribute('class', 'fl-sub'); s.textContent = '';
-      const m = document.createElementNS(SVGNS, 'text'); m.setAttribute('x', 112); m.setAttribute('y', 12); m.setAttribute('class', 'fl-mark'); m.textContent = '';
-      g.append(r, t, s, m);
-      const pick = ()=>{ this._userPicked = true; this.selected = nd.id; this.renderDetail(nd.id); this._refreshSel(); };
-      g.addEventListener('click', pick);
-      g.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); } });
-      svg.appendChild(g);
-    });
     const pk = document.createElementNS(SVGNS, 'circle');
     pk.setAttribute('r', 5); pk.setAttribute('class', 'fl-packet'); pk.setAttribute('cx', -20); pk.setAttribute('cy', -20);
     svg.appendChild(pk);
     host.appendChild(svg);
-    this.svg = svg; this.built = true;
+    this.svg = svg;
+  },
+  _makeNode(nd){
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'fl-node idle'); g.dataset.id = nd.id;
+    g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', nd.label);
+    const r = document.createElementNS(SVGNS, 'rect'); r.setAttribute('width', 124); r.setAttribute('height', 44); r.setAttribute('class', 'fl-box');
+    const t = document.createElementNS(SVGNS, 'text'); t.setAttribute('x', 62); t.setAttribute('y', 19); t.setAttribute('class', 'fl-label'); t.textContent = nd.label;
+    const s = document.createElementNS(SVGNS, 'text'); s.setAttribute('x', 62); s.setAttribute('y', 35); s.setAttribute('class', 'fl-sub'); s.textContent = '';
+    const m = document.createElementNS(SVGNS, 'text'); m.setAttribute('x', 118); m.setAttribute('y', 11); m.setAttribute('class', 'fl-mark'); m.textContent = '';
+    g.append(r, t, s, m);
+    const pick = ()=>{ this._userPicked = true; this.selected = nd.id; this.renderDetail(nd.id); this._refreshSel(); };
+    g.addEventListener('click', pick);
+    g.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(); } });
+    return g;
+  },
+  _fadeIn(el, animate){
+    if(!animate) return;
+    el.classList.add('fl-enter');                            // opacity 0 ...
+    requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('fl-enter')));   // ... transitions to 1
+  },
+  _fadeOut(el, animate){
+    el.classList.add('fl-leave');                            // out of every lookup immediately; removed once faded
+    setTimeout(()=>el.remove(), animate ? 260 : 0);
+  },
+  _computeLayout(){
+    const w = document.getElementById('win-flow').clientWidth || 640;
+    this.layout = w < 520 ? 'tall' : 'wide';
+  },
+  build(hard){
+    const host = document.getElementById('flow-graph'); if(!host) return;
+    this._computeLayout();
+    host.dataset.layout = this.layout;
+    const first = hard || !this.svg || !host.contains(this.svg);
+    if(first) this._makeShell(host);
+    const animate = !first && !this._reduced();
+    const svg = this.svg, nodes = this.nodeList(), L = this.layoutFor(nodes);
+    svg.setAttribute('viewBox', `0 0 ${L.w} ${L.h}`);
+    svg.setAttribute('aria-label', this.kind === 'agent' ? 'Agent loop: guardrails, then think and tool steps' : 'Pipeline: rate limit, guardrails, embed, vector and keyword search, fuse, prompt, LLM');
+    const packet = svg.querySelector('.fl-packet');
+
+    // nodes: leave / move / enter
+    const wantIds = new Set(nodes.map(n=>n.id));
+    svg.querySelectorAll('.fl-node:not(.fl-leave)').forEach(g=>{ if(!wantIds.has(g.dataset.id)) this._fadeOut(g, animate); });
+    nodes.forEach(nd=>{
+      const [x, y] = L.pos[nd.id];
+      let g = svg.querySelector(`.fl-node[data-id="${nd.id}"]:not(.fl-leave)`);
+      if(g){ g.style.transform = `translate(${x}px,${y}px)`; return; }     // existing: glides (CSS transition)
+      g = this._makeNode(nd);
+      g.style.transform = `translate(${x}px,${y}px)`;
+      svg.insertBefore(g, packet);
+      this._fadeIn(g, animate);
+    });
+
+    // edges: leave / update / enter (always drawn UNDER the nodes)
+    const wantEdges = new Set();
+    nodes.forEach(nd=>nd.preds.forEach(p=>wantEdges.add(p + '>' + nd.id)));
+    svg.querySelectorAll('.fl-edge:not(.fl-leave)').forEach(e=>{
+      if(!wantEdges.has(e.dataset.edge)) this._fadeOut(e, animate); else e.setAttribute('d', L.paths[e.dataset.edge]);
+    });
+    const firstNode = svg.querySelector('.fl-node');
+    wantEdges.forEach(key=>{
+      if(svg.querySelector(`.fl-edge[data-edge="${key}"]:not(.fl-leave)`)) return;
+      const path = document.createElementNS(SVGNS, 'path');
+      path.setAttribute('d', L.paths[key]); path.setAttribute('class', 'fl-edge'); path.setAttribute('marker-end', 'url(#fl-arrow)');
+      path.dataset.edge = key;
+      svg.insertBefore(path, firstNode);
+      this._fadeIn(path, animate);
+    });
+    this.built = true;
     Object.keys(this.nodes).forEach(id=>this._markNode(id, true));   // restore state after a relayout
   },
+  _reduced(){ return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); },
   _resetVisuals(){
     this.nodes = {}; this._totalMs = 0; this._logLines = []; this.selected = null; this._userPicked = false;
     this._finalStep = null; this._started = {}; this.dyn = [];
     const wasAgent = this.kind === 'agent'; this.kind = 'pipeline';
     if(this.svg && wasAgent) this.build();
-    if(this.svg) this.svg.querySelectorAll('.fl-node').forEach(g=>this._markNode(g.dataset.id, true));
+    if(this.svg) this.svg.querySelectorAll('.fl-node:not(.fl-leave)').forEach(g=>this._markNode(g.dataset.id, true));
     const log = document.getElementById('flow-log'); if(log) log.textContent = '';
     const d = document.getElementById('flow-detail'); if(d) d.textContent = '';
     this._status();
   },
   _markNode(id, instant){
     if(!this.svg) return;
-    const g = this.svg.querySelector(`.fl-node[data-id="${id}"]`); if(!g) return;
+    const g = this.svg.querySelector(`.fl-node[data-id="${id}"]:not(.fl-leave)`); if(!g) return;
     const n = this.nodes[id] || {status:'idle'};
     g.setAttribute('class', 'fl-node ' + n.status + (this.selected === id ? ' sel' : ''));
     const sub = g.querySelector('.fl-sub'), mark = g.querySelector('.fl-mark');
     const lab = g.querySelector('.fl-label'), want = this.labelFor(id);
     if(lab.textContent !== want) lab.textContent = want;
-    const marks = {ok:'✓', blocked:'✕', error:'!', empty:'∅', skipped:'–', active:'●'};
+    const marks = {ok:'OK', blocked:'STOP', error:'ERR', empty:'NONE', skipped:'SKIP', active:'...'};
     mark.textContent = marks[n.status] || '';
     sub.textContent = n.status === 'active' ? ((id === 'llm' || /^step_/.test(id)) && n.ttft ? 'streaming…' : 'working…')
                     : n.dur != null ? (n.dur < 1000 ? Math.round(n.dur) + ' ms' : (n.dur/1000).toFixed(1) + ' s')
                     : '';
     // Edges that lead INTO a finished/active node light up.
     this.nodeList().forEach(nd=>nd.preds.forEach(p=>{
-      const e = this.svg.querySelector(`.fl-edge[data-edge="${p}>${nd.id}"]`);
+      const e = this.svg.querySelector(`.fl-edge[data-edge="${p}>${nd.id}"]:not(.fl-leave)`);
       const pn = this.nodes[p], cn = this.nodes[nd.id];
       if(e) e.classList.toggle('lit', !!(pn && cn && pn.status !== 'idle' && cn.status !== 'idle'));
     }));
@@ -384,7 +439,7 @@ const Flow = {
     if(!this.svg || this.skipping || document.hidden) return Promise.resolve();
     const nd = this.nodeList().find(n=>n.id === toId);
     const edges = (nd ? nd.preds : []).filter(p=>this.nodes[p] && this.nodes[p].status !== 'idle')
-      .map(p=>this.svg.querySelector(`.fl-edge[data-edge="${p}>${toId}"]`)).filter(Boolean);
+      .map(p=>this.svg.querySelector(`.fl-edge[data-edge="${p}>${toId}"]:not(.fl-leave)`)).filter(Boolean);
     if(!edges.length) return Promise.resolve();
     const dot = this.svg.querySelector('.fl-packet'), ms = this.travel();
     return new Promise(res=>{
@@ -443,11 +498,11 @@ const Flow = {
     // agent's search tool call share one implementation.
     const showDense = x=>{
       add('fd-line', `cut-off ${x.threshold} (the | tick): below it a chunk is ignored`);
-      x.candidates.forEach(c=>chunkRow(c, c.passed ? '✓' : '✗', c.passed ? 'pass' : 'fail', x.threshold));
+      x.candidates.forEach(c=>chunkRow(c, c.passed ? 'PASS' : 'FAIL', c.passed ? 'pass' : 'fail', x.threshold));
     };
     const showKeyword = x=>{
       add('fd-line', x.rare_terms && x.rare_terms.length ? 'rare terms: ' + x.rare_terms.join(', ') : 'no rare corpus terms in the question');
-      (x.hits || []).forEach(c=>chunkRow(c, '→'));
+      (x.hits || []).forEach(c=>chunkRow(c, 'match:'));
     };
     const showFuse = x=>{
       x.results.forEach(c=>chunkRow(c, '[' + c.n + ']', 'pass'));
@@ -464,7 +519,7 @@ const Flow = {
     else if(id === 'guardrails' && n.status === 'blocked'){ add('fd-line', 'The question was stopped here. (Which rule matched is never revealed.)'); }
     else if(/^step_\d+$/.test(id)){
       add('fd-line', d.final ? 'The model answered directly: no tool call this step.' : 'The model decided to call:');
-      (d.calls || []).forEach(c=>add('fd-line', '→ ' + c.name + ' ' + JSON.stringify(c.args)));
+      (d.calls || []).forEach(c=>add('fd-line', 'call: ' + c.name + ' ' + JSON.stringify(c.args)));
       if(d.text_chars) add('fd-line', d.text_chars + ' characters of text streamed in this step');
     }else if(/^tool_\d+$/.test(id)){
       add('fd-line', (d.name || '') + ' ' + JSON.stringify(d.args || {}));
@@ -478,6 +533,20 @@ const Flow = {
       }
       if(d.result){ add('fd-sub', 'What the model received (preview)'); add('fd-text', d.result); }
     }
+  },
+
+  renderRuns(){
+    const sel = document.getElementById('flow-runs'); if(!sel) return;
+    sel.textContent = '';
+    this.runs.forEach((r, i)=>{
+      const o = document.createElement('option'); o.value = String(i);
+      const t = r.at ? r.at.toTimeString().slice(0, 5) : '--:--';
+      const q = ((r.info && r.info.q) || '').replace(/\s+/g, ' ').slice(0, 34);
+      o.textContent = `${t}  ${(r.info && r.info.mode) || ''}  ${q}`;     // textContent: a question is never markup
+      sel.appendChild(o);
+    });
+    sel.disabled = this.runs.length < 2;
+    sel.title = this.runs.length < 2 ? 'Previous runs from this visit appear here' : 'Replay an earlier run from this visit';
   },
 
   /* ── controls ─────────────────────────────────────────────── */
@@ -498,6 +567,8 @@ const Flow = {
     document.getElementById('flow-next').addEventListener('click', ()=>this.next());
     document.getElementById('flow-skip').addEventListener('click', ()=>this.skip());
     document.getElementById('flow-replay').addEventListener('click', ()=>this.replay());
+    const runs = document.getElementById('flow-runs');
+    if(runs) runs.addEventListener('change', e=>{ const r = this.runs[+e.target.value]; if(r) this.replay(r); });
     document.getElementById('flow-sync').addEventListener('change', e=>this.setSync(e.target.checked));
     const ag = document.getElementById('flow-agent');
     if(ag) ag.addEventListener('change', e=>{ if(typeof AI !== 'undefined') AI.setMode(e.target.checked ? 'agent' : 'pipeline'); });
@@ -512,7 +583,7 @@ const Flow = {
      the `flow` terminal command. (Opening it from the dock used to skip setup and show an empty window.) */
   afterOpen(){
     if(!this.wired){ this.wired = true; this.wire(); }
-    this.build();
+    this.build(true);
     // Show the most recent run in its final state (instantly), so opening the monitor is never an empty box.
     if(this.last && this.queue.length === 0 && !this.playing){
       this.nodes = {}; this._logLines = []; this._finalStep = null; this._started = {}; this.dyn = [];
@@ -520,7 +591,7 @@ const Flow = {
       const log = document.getElementById('flow-log'); if(log) log.textContent = '';
       this.last.events.forEach(e=>this._apply(e, true));
     }
-    this.renderControls(); this._status();
+    this.renderControls(); this.renderRuns(); this._status();
   },
   open(){ openWin('win-flow'); },          // openWin() calls afterOpen()
 };

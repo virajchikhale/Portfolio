@@ -125,6 +125,10 @@ class PgVectorStore:
                 await asyncio.sleep(delay)
         raise RAGError("Could not connect to the vector database", "database_unreachable") from last
 
+    @property
+    def pool(self):
+        return self._pool
+
     def _p(self):
         if self._pool is None:
             raise RAGError("vector store not initialised")

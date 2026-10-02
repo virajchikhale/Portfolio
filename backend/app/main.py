@@ -1,3 +1,4 @@
+import hmac
 import json
 import logging
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -9,20 +10,20 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.agent import build_agent_prompt, build_system_prompt, load_core
-from app.agent.runner import run_agent
 from app.agent.tools import SourceBook, ToolContext, build_tools
 from app.bootstrap import start_rag
+from app.chat import stream_turn
 from app.config import Settings, get_settings
-from app.llm.base import LLMError, Message
+from app.llm.base import Message
 from app.llm.factory import build_llm
 from app.mcp_server import build_mcp_server, http_app
 from app.rag.chunker import load_chunks
-from app.rag.embeddings import RAG_HINTS
 from app.rag.ingest import CORE_FILE
-from app.rag.retriever import format_context, retrieve
+from app.rag.store import PgVectorStore
 from app.security.guardrails import GuardrailViolation, check_input, looks_like_injection, sanitize
 from app.security.rate_limit import RateLimiter, client_ip
 from app.skills_engine.loader import load_skills
+from app.telemetry import MemoryRunStore, Outcome, PgRunStore, Telemetry, summarize
 from app.trace import Tracer
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +39,23 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=4000)  # hard cap before our own (smaller) guardrail
     history: list[Turn] = Field(default_factory=list, max_length=50)
     mode: Literal["pipeline", "agent"] = "pipeline"  # pipeline = fixed retrieve->answer chain; agent = tool loop
+
+
+async def _start_telemetry(settings: Settings, rag) -> Telemetry | None:
+    """Postgres when the vector store is Postgres (survives restarts); otherwise a bounded in-memory store."""
+    if not settings.telemetry_enabled:
+        return None
+    store = MemoryRunStore()
+    if isinstance(rag.store, PgVectorStore) and rag.store.pool is not None:
+        try:
+            pg = PgRunStore(rag.store.pool)
+            await pg.init()
+            store = pg
+        except Exception:
+            log.exception("could not set up the Postgres run store; keeping run statistics in memory")
+    telemetry = Telemetry(store, settings)
+    await telemetry.prune()
+    return telemetry
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -69,12 +87,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         rag = await start_rag(settings)
         app.state.rag, app.state.embedder, app.state.lexical = rag.store, rag.embedder, rag.lexical
         app.state.rag_reason = rag.reason  # None = healthy; else a RAG_HINTS key shown in /api/health and the monitor
+        app.state.telemetry = await _start_telemetry(settings, rag)
         async with AsyncExitStack() as stack:
             if mcp is not None:
                 await stack.enter_async_context(mcp.session_manager.run())
             try:
                 yield
             finally:
+                if app.state.telemetry is not None:
+                    await app.state.telemetry.drain()
                 await rag.close()
 
     app = FastAPI(
@@ -121,15 +142,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/chat")
     async def chat(body: ChatRequest, request: Request):
         tracer = Tracer()
+        st = request.app.state
+
+        def record(outcome: str, mode: str, out: Outcome | None = None) -> None:
+            if st.telemetry is None:
+                return
+            out = out or Outcome()
+            st.telemetry.record_nowait(summarize(
+                tracer.events, outcome=outcome, mode=mode, requested=body.mode, model=settings.llm_model,
+                question=body.message, sources=out.sources, ttft_ms=out.first_delta_ms,
+                store_question=settings.telemetry_store_questions))
 
         def blocked(stage: str, detail: str, payload: dict, status: int, headers: dict | None = None):
             # The trace goes back with the error so the UI can show WHERE the request was stopped.
             tracer.end(stage, "blocked", detail)
+            record("blocked", "pipeline")
             return JSONResponse({**payload, "trace": tracer.drain()}, status_code=status, headers=headers)
 
         tracer.start("rate_limit", "Rate limit")
         try:
-            request.app.state.limiter.check(client_ip(request, settings))
+            st.limiter.check(client_ip(request, settings))
         except HTTPException as exc:
             return blocked("rate_limit", "limit reached", {"detail": exc.detail}, exc.status_code, exc.headers)
         tracer.end("rate_limit", detail="within limits")
@@ -149,99 +181,71 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Deliberately generic: never reveal which pattern matched.
             return blocked("guardrails", "blocked by input guardrail", {"error": exc.message}, exc.status)
         tracer.end("guardrails", detail=f"{len(text)} chars checked", data={"chars": len(text)})
-        messages = [*history, Message("user", text)]
 
         # Retrieval. A follow-up like "tell me more" has no keywords, so include the previous user turn.
         prior_user = next((m.content for m in reversed(history) if m.role == "user"), "")
         query = f"{prior_user} {text}".strip()[: settings.max_input_chars * 2]
 
-        def sse(obj) -> str:
-            return f"data: {json.dumps(obj)}\n\n"
-
         # Agent mode costs up to agent_max_steps model calls. If the daily budget cannot absorb that, quietly use
         # the cheap pipeline instead (and say so in the trace) rather than failing the visitor's question.
-        wanted_agent = body.mode == "agent" and settings.agent_enabled
-        use_agent = wanted_agent and request.app.state.limiter.can_afford(settings.agent_max_steps - 1)
+        use_agent = body.mode == "agent" and settings.agent_enabled and st.limiter.can_afford(
+            settings.agent_max_steps - 1)
         note = None
         if body.mode == "agent" and not use_agent:
             note = ("agent mode is disabled" if not settings.agent_enabled
                     else "daily budget low: using the fast pipeline")
-        tracer.meta(mode="agent" if use_agent else "pipeline", requested=body.mode, note=note)
+        mode = "agent" if use_agent else "pipeline"
+        tracer.meta(mode=mode, requested=body.mode, note=note)
 
-        async def agent_events():
-            for e in tracer.drain():
-                yield sse({"trace": e})
-            tool_ctx = ToolContext(settings, request.app.state.skills, request.app.state.chunks,
-                                   request.app.state.rag, request.app.state.embedder, request.app.state.lexical,
-                                   SourceBook())
-            kwargs = dict(llm=request.app.state.llm, tools=request.app.state.tools, tool_ctx=tool_ctx,
-                          system=request.app.state.agent_prompt, settings=settings)
-            async for item in run_agent(kwargs, history, text, tracer):
-                if "agent_summary" in item:  # internal: charge the extra model calls to the daily budget
-                    request.app.state.limiter.charge(item["agent_summary"]["steps"] - 1)
-                    continue
-                yield sse(item)
-            yield "data: [DONE]\n\n"
+        def sse(obj) -> str:
+            return f"data: {json.dumps(obj)}\n\n"
 
-        async def events():
-            for e in tracer.drain():
-                yield sse({"trace": e})
-
-            hits = []
-            if request.app.state.rag is not None:
-                try:
-                    hits = await retrieve(request.app.state.rag, request.app.state.embedder, query, settings,
-                                          request.app.state.lexical, tracer)
-                except Exception:
-                    log.exception("retrieval failed; answering from core facts only")
-                    tracer.abort_open("retrieval failed; continuing without sources")
-            else:
-                reason = request.app.state.rag_reason or "unknown"
-                for stage, label in (("embed", "Embed query"), ("dense", "Vector search"),
-                                     ("keyword", "Keyword (BM25)"), ("fuse", "Fuse + gate")):
-                    tracer.skip(stage, label, f"retrieval unavailable: {reason}",
-                                {"reason": reason, "hint": RAG_HINTS.get(reason, RAG_HINTS["unknown"])})
-            for e in tracer.drain():
-                yield sse({"trace": e})
-
-            tracer.start("prompt", "Build prompt")
-            system = f"{request.app.state.system_prompt}\n\n{format_context(hits)}"
-            sources = [{"n": i, "label": h.chunk.label, "source": h.chunk.source} for i, h in enumerate(hits, 1)]
-            # Size only: the prompt text itself is never exposed.
-            tracer.end("prompt", detail=f"{len(hits)} source(s) in context",
-                       data={"sources": len(hits), "approx_tokens": len(system) // 4})
-            for e in tracer.drain():
-                yield sse({"trace": e})
-            if sources:
-                yield sse({"sources": sources})
-
-            tracer.start("llm", "LLM", settings.llm_model)
-            yield sse({"trace": tracer.drain()[-1]})
-            chunks, chars, first = 0, 0, None
+        async def stream():
+            out, completed = Outcome(), False
             try:
-                async for chunk in request.app.state.llm.stream(system, messages):
-                    if first is None:
-                        first = tracer.now()
-                        tracer.progress("llm", "first token")
-                        for e in tracer.drain():
-                            yield sse({"trace": e})
-                    chunks += 1
-                    chars += len(chunk)
-                    yield sse({"delta": chunk})
-                tracer.end("llm", detail=f"{chunks} chunks, {chars} chars",
-                           data={"model": settings.llm_model, "chunks": chunks, "chars": chars,
-                                 "ttft_ms": first})
                 for e in tracer.drain():
                     yield sse({"trace": e})
-                yield "data: [DONE]\n\n"
-            except LLMError as exc:
-                tracer.end("llm", "error", "model call failed")
-                for e in tracer.drain():
-                    yield sse({"trace": e})
-                yield sse({"error": str(exc)})
+                async for item in stream_turn(st, settings, use_agent=use_agent, history=history, text=text,
+                                              query=query, tracer=tracer):
+                    out.observe(item, tracer.now())
+                    yield sse(item)
+                completed = True
+                if out.error is None:
+                    yield "data: [DONE]\n\n"
+            finally:
+                # Runs on normal completion AND when the visitor leaves mid-answer (generator closed/cancelled).
+                final_mode = out.mode or mode
+                record(out.classify(completed), final_mode, out)
+                if use_agent:  # the extra model calls were really made, even if the visitor never saw the answer
+                    steps = sum(1 for e in tracer.events if e["phase"] == "start" and e["id"].startswith("step_"))
+                    st.limiter.charge(steps - 1)
 
-        return StreamingResponse(agent_events() if use_agent else events(), media_type="text/event-stream",
-                                 headers={"X-Accel-Buffering": "no"})
+        return StreamingResponse(stream(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
+
+    # ── read-only statistics (aggregates only: no questions, no answers, nothing per visitor) ───────────
+    read_limiter = RateLimiter(settings.model_copy(update={
+        "rate_limit_per_minute": settings.read_rate_limit_per_minute, "rate_limit_per_day": 10**9,
+        "daily_global_request_budget": 10**9}))
+
+    @app.get("/api/stats")
+    async def stats(request: Request, window: str = "24h"):
+        read_limiter.check(client_ip(request, settings))
+        if request.app.state.telemetry is None:
+            return {"enabled": False}
+        return {"enabled": True, **await request.app.state.telemetry.stats(window)}
+
+    if settings.admin_token is not None:
+        admin_token = settings.admin_token.get_secret_value().strip()
+
+        @app.get("/api/admin/runs")
+        async def admin_runs(request: Request, limit: int = 50):
+            read_limiter.check(client_ip(request, settings))
+            supplied = request.headers.get("authorization", "")
+            if not admin_token or not hmac.compare_digest(supplied.encode(), f"Bearer {admin_token}".encode()):
+                raise HTTPException(401, "unauthorized", headers={"WWW-Authenticate": "Bearer"})
+            if request.app.state.telemetry is None:
+                return {"runs": []}
+            return {"runs": await request.app.state.telemetry.recent(limit)}
 
     if mcp_asgi is not None:
         # Exactly ONE path, not a catch-all mount at "/": a root mount would swallow every route added after it

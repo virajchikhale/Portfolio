@@ -2,6 +2,7 @@
 
 Fine for a single-instance portfolio. Swap the storage for Redis/Postgres if you ever run >1 replica.
 """
+import ipaddress
 import time
 from collections import defaultdict, deque
 from datetime import date
@@ -9,6 +10,23 @@ from datetime import date
 from fastapi import HTTPException, Request
 
 from app.config import Settings
+
+MAX_TRACKED_CLIENTS = 50_000  # memory bound: a flood of distinct addresses must not grow the process without limit
+_GC_EVERY = 256
+
+
+def limiter_key(ip: str) -> str:
+    """The identity a client is limited under. IPv6 clients are grouped by /64: one subscriber normally controls a
+    whole /64, so counting each address separately would let a single attacker sidestep every limit."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if addr.version == 6:
+        if addr.ipv4_mapped:
+            return str(addr.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False).network_address) + "/64"
+    return str(addr)
 
 
 class RateLimiter:
@@ -18,6 +36,15 @@ class RateLimiter:
         self._day: dict[str, int] = defaultdict(int)
         self._day_key = date.today()
         self._global = 0
+        self._calls = 0
+
+    def _gc(self, now: float) -> None:
+        """Drop clients with nothing recent; if still over the cap (a flood), start fresh rather than grow."""
+        for key in [k for k, w in self._minute.items() if not w or now - w[-1] > 60]:
+            del self._minute[key]
+        if len(self._day) > MAX_TRACKED_CLIENTS:
+            self._day.clear()
+            self._minute.clear()
 
     def _roll_day(self) -> None:
         today = date.today()
@@ -25,7 +52,11 @@ class RateLimiter:
             self._day_key, self._day, self._global = today, defaultdict(int), 0
 
     def check(self, client: str) -> None:
+        client = limiter_key(client)
         self._roll_day()
+        self._calls += 1
+        if self._calls % _GC_EVERY == 0:
+            self._gc(time.monotonic())
         if self._global >= self._s.daily_global_request_budget:
             raise HTTPException(503, "Daily AI budget reached. Please try again tomorrow.")
         if self._day[client] >= self._s.rate_limit_per_day:
