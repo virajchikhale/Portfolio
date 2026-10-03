@@ -151,11 +151,11 @@ const CONFIG = {
       ],
     },
     {
-      name: 'Attendance Management System',
-      desc: 'Enterprise-level attendance tracking system managing 2000+ students and 60+ teachers across 7 branches, with automated Excel/PDF report generation.',
-      tags: ['HTML', 'CSS', 'JavaScript', 'PHP', 'MySQL', 'AJAX'],
+      name: 'Student Management System',
+      desc: 'Role-based college platform with five roles, student records, attendance tracking, exams and marks, notices and CSV reports. Email-OTP sign-up, CSRF-protected API, Dockerised.',
+      tags: ['PHP', 'PostgreSQL', 'JavaScript', 'Docker', 'PHPMailer'],
       links: [
-        { label: 'GitHub', url: 'https://github.com/virajchikhale' },
+        { label: 'GitHub', url: 'https://github.com/virajchikhale/student_manage' },
       ],
     },
     {

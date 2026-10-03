@@ -83,7 +83,10 @@ class OpenAICompatClient:
                                          for c in e.tool_calls]
                 out.append(msg)
             elif isinstance(e, ToolResults):
-                out += [{"role": "tool", "tool_call_id": r.call.id, "content": json.dumps(r.response)} for r in e.results]
+                out += [
+                    {"role": "tool", "tool_call_id": r.call.id, "content": json.dumps(r.response)}
+                    for r in e.results
+                ]
             else:
                 raise TypeError(f"unknown transcript entry: {type(e).__name__}")
         return out

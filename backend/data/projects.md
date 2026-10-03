@@ -9,8 +9,8 @@ A recommendation engine that suggests places based on the user's mood, preferenc
 ## Movie Recommendation System (ML)
 Suggests movies from user preferences and viewing history. Uses word embeddings and vectorization to understand movie descriptions and user preferences, and a hybrid approach that combines collaborative filtering with content-based filtering. Deployed as an interactive Streamlit app; reported 90%+ user satisfaction. Stack: Python, Pandas, NumPy, Scikit-learn, Streamlit.
 
-## Attendance Management System (full stack)
-Enterprise-style attendance tracking built with HTML, CSS, JavaScript, Bootstrap, PHP, SQL, AJAX and jQuery. It handled 7 branches with 3 classes each, 300+ subjects, 60+ teachers and 2000+ students, and generates date-wise, subject-wise and teacher-wise reports (Excel/PDF/CSV export). See the separate Attendance System architecture document for how it works.
+## Student Management System (full stack)
+Role-based student management platform for a college: five roles (admin, principal, HOD, teacher, student), student records, courses per department and semester, attendance (present, late, absent) with percentage tracking, exams and marks with grades, notices, role dashboards and CSV/print reports. Email OTP registration and password reset, CSRF-protected JSON API, server-side permission checks. Built with PHP 8, PostgreSQL, Bootstrap, jQuery and PHPMailer, and packaged with Docker Compose. See the separate Student Management System architecture document for how it works.
 
 ## Library Management System (full stack)
 Built with HTML, CSS, JavaScript, Bootstrap, PHP, SQL, AJAX and jQuery for a college with more than 2000 students. Customized for department-wise book distribution and automated fine calculations, with issue, student, book and return reports.

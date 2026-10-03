@@ -6,7 +6,7 @@
     {"id": "exp-2", "kind": "fact", "q": "Tell me about his Tableau internship", "sources_any": ["experience.md"], "contains_any": ["15%", "conversion", "10%"]},
     {"id": "exp-3", "kind": "fact", "q": "What did he build at Reva Tech?", "sources_any": ["experience.md"], "contains_any": ["Panchayat"]},
     {"id": "proj-1", "kind": "fact", "q": "Which recommendation systems has he built?", "sources_any": ["projects.md"], "contains_any": ["Movie", "Place"]},
-    {"id": "proj-2", "kind": "fact", "q": "How does the attendance system handle login and OTP?", "sources_any": ["attendance-system.md"], "contains_any": ["OTP"]},
+    {"id": "proj-2", "kind": "fact", "q": "How does the student management system handle login and OTP?", "sources_any": ["student-management-system.md"], "contains_any": ["OTP"]},
     {"id": "proj-3", "kind": "fact", "q": "Tell me about the Smart Farming project", "sources_any": ["projects.md"], "contains_any": ["farm"]},
     {"id": "skill-1", "kind": "fact", "q": "What programming languages does he know?", "sources_any": ["skills.md"], "contains_all": ["Python"]},
     {"id": "skill-2", "kind": "fact", "q": "Does he know Tableau and Power BI?", "sources_any": ["skills.md", "experience.md"], "contains_any": ["Tableau"]},

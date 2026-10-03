@@ -46,7 +46,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore")
 
     # ── LLM (provider is swappable via env; Gemini is the default) ──────────
-    llm_provider: Literal["gemini", "openai", "fake"] = "gemini"  # openai = any OpenAI-compatible API (Groq, Ollama, ...)
+    # openai = any OpenAI-compatible API (Groq, Ollama, ...)
+    llm_provider: Literal["gemini", "openai", "fake"] = "gemini"
     llm_model: str = "gemini-2.5-flash"  # override with LLM_MODEL; check current names in Google AI docs
     gemini_api_key: SecretStr | None = None
     # For LLM_PROVIDER=openai. Default points at Groq's free tier; for local Ollama use http://host.docker.internal:11434/v1

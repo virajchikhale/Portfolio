@@ -70,8 +70,8 @@ async def test_expected_failures_are_clean_error_results_with_the_message(server
 async def test_list_and_get_project(server):
     async with Client(server, raise_exceptions=True) as c:
         lst = await c.call_tool("list_projects", {})
-        got = await c.call_tool("get_project", {"name": "attendance"})
-    assert "Attendance Management System" in lst.content[0].text and "Attendance" in got.content[0].text
+        got = await c.call_tool("get_project", {"name": "student management"})
+    assert "Student Management System" in lst.content[0].text and "Student" in got.content[0].text
 
 
 async def test_citation_numbering_restarts_for_every_call(server):

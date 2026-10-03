@@ -161,11 +161,11 @@
   },
   {
    "c": "legit",
-   "t": "Tell me about his password reset (OTP) flow in the attendance system"
+   "t": "Tell me about his password reset (OTP) flow in the student management system"
   },
   {
    "c": "legit",
-   "t": "How does the attendance app handle authentication tokens?"
+   "t": "How does the student management app handle authentication tokens?"
   },
   {
    "c": "legit",

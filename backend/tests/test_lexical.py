@@ -16,7 +16,7 @@ def ix():
     ("What did he do at Inorbvict?", "experience.md"),
     ("Tell me about Reva Tech", "experience.md"),
     ("What is ZCOER?", "experience.md"),
-    ("What is PHPMailer used for?", "attendance-system.md"),
+    ("What is PHPMailer used for?", "student-management-system.md"),
     ("Where is Nalanda school?", "education.md"),
     ("What programming languages does he know?", "skills.md"),
 ])

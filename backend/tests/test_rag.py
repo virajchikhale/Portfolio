@@ -40,7 +40,7 @@ def test_key_changes_with_model_dim_or_text():
 
 def test_real_corpus_loads_and_excludes_core():
     cs = load_chunks("data", exclude={"core.md"})
-    assert {c.source for c in cs} >= {"experience.md", "projects.md", "attendance-system.md", "education.md"}
+    assert {c.source for c in cs} >= {"experience.md", "projects.md", "student-management-system.md", "education.md"}
     assert "core.md" not in {c.source for c in cs}
     assert all(10 < len(c.content) <= 1300 for c in cs)
 
@@ -78,7 +78,7 @@ async def corpus():
 @pytest.mark.parametrize("question,expected", [
     ("What did he do at Inorbvict with Power BI dashboards?", "experience.md"),
     ("What is his CGPA and polytechnic diploma percentage?", "education.md"),
-    ("How does the OTP login and PHPMailer work in the attendance system?", "attendance-system.md"),
+    ("How does the OTP login and PHPMailer work in the student management system?", "student-management-system.md"),
     ("Tableau sales conversion internship", "experience.md"),
     ("movie recommendation hybrid collaborative filtering Streamlit", "projects.md"),
 ])
