@@ -1,5 +1,8 @@
 # Projects
 
+## VC·OS Portfolio
+This website: a Mac OS 1984-inspired interactive portfolio with draggable windows, a terminal, a dock and an in-page browser. It has a FastAPI backend, a pgvector-backed retrieval-augmented assistant (VC·AI) powered by Gemini, prompt-injection guardrails and rate limiting, all running in Docker. Stack: Python, FastAPI, PostgreSQL with pgvector, Gemini, Docker.
+
 ## Agentic AI Workflow Engine
 Multi-agent orchestration system with task routing, tool calling and memory handling, using LangGraph and CrewAI patterns and intelligent fallback mechanisms. Stack: Python, LangChain, LangGraph, CrewAI.
 
@@ -20,6 +23,3 @@ Analysis of a single seller's textile sales on Amazon: state-wise and category-w
 
 ## Smart Farming web app
 A web app giving farmers crop information, predictive scheduling and expense tracking, with weather integration, alerts, user authentication and a community forum for sharing knowledge. Stack: HTML, CSS, JavaScript, Bootstrap, AJAX, PHP, SQL.
-
-## VC·OS Portfolio
-This website: a Mac OS 1984-inspired interactive portfolio with draggable windows, a terminal, a dock and an in-page browser. It now has a FastAPI backend, a pgvector-backed retrieval-augmented assistant (VC·AI) powered by Gemini, prompt-injection guardrails and rate limiting, all running in Docker.

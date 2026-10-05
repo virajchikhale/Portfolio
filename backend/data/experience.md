@@ -1,5 +1,10 @@
 # Work experience
 
+## Software Engineer at Equations Work, Bavdhan (Feb 2025 - Present)
+Current role. Joined as an intern in early 2025 and converted to full-time in mid-2025. Builds AI-driven applications: LangChain agent workflows, and multi-agent orchestration with task routing, tool calling and memory handling using LangGraph and CrewAI patterns, with fallback mechanisms.
+Builds the surrounding product as well: React and Next.js front ends with real-time chat interfaces and session persistence, FastAPI backend services that integrate third-party services and business logic, and PostgreSQL schemas for chat logs, user metadata and analytics.
+Contributes to system design: API contracts, service boundaries and the data flow between the front end, the AI agents and the databases.
+
 ## Data Science Intern at Inorbvict Healthcare India Pvt Ltd, Hinjewadi (Sep 2024 - Jan 2025)
 Managed an international sales chatbot: troubleshooting user issues, refining workflows and keeping customer interactions running smoothly.
 Designed and implemented 20+ Power BI dashboards on data from Google Forms and Google Sheets to track employee performance, uncover inefficiencies, and improve reporting accuracy and decision-making.
