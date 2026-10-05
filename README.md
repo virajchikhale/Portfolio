@@ -1,13 +1,13 @@
 # VC·OS — AI Engineer Portfolio
 
-A retro Mac OS 1984 desktop (frontend) backed by a real AI service (FastAPI + Gemini) that answers
+A retro Mac OS 1984 desktop (frontend) backed by a real AI service (FastAPI + Gemini, or any OpenAI-compatible API such as Groq or Ollama) that answers
 questions about me, grounded in a profile and a set of **skills**.
 
-> `main` = static GitHub Pages site. `ai-portfolio` = this full-stack version.
+> `main` = static GitHub Pages site. `ai-fullstack` = this full-stack version.
 
 ## Run
 ```bash
-cp .env.example .env            # add GEMINI_API_KEY (or set LLM_PROVIDER=fake to run keyless)
+cp .env.example .env            # add GEMINI_API_KEY (or LLM_PROVIDER=openai + LLM_BASE_URL/LLM_API_KEY for Groq/Ollama; LLM_PROVIDER=fake runs keyless)
 docker compose up --build       # http://localhost:8080
 ```
 Backend only: `cd backend && pip install -r requirements-dev.txt && pytest && uvicorn app.main:app --reload`
@@ -261,8 +261,8 @@ browser ──► nginx (static UI, CSP, rate limit) ──/api──► FastAPI
 The backend is never published to the host; only nginx is. The API key exists only in the backend's environment.
 
 ## Configuration (all env vars — see `.env.example`)
-`LLM_PROVIDER`, `LLM_MODEL`, `GEMINI_API_KEY`, token/rate/budget limits, `CORS_ORIGINS`, `ENVIRONMENT`.
-Add a provider by implementing `LLMClient` in `backend/app/llm/` and registering it in `factory.py`.
+`LLM_PROVIDER` (`gemini` | `openai` | `fake`), `LLM_MODEL`, `GEMINI_API_KEY`, `LLM_BASE_URL` / `LLM_API_KEY` (OpenAI-compatible providers), token/rate/budget limits, `CORS_ORIGINS`, `ENVIRONMENT`.
+The `openai` provider (`backend/app/llm/openai_compat.py`) covers Groq, Ollama and other OpenAI-compatible endpoints. A recruiter-oriented view is served at `/recruiter.html`. Add a provider by implementing `LLMClient` in `backend/app/llm/` and registering it in `factory.py`.
 
 ## Security model
 | Threat | Mitigation |
