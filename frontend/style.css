@@ -79,7 +79,7 @@ body{
 .boot-skip a{color:inherit;text-decoration:underline;cursor:pointer;}
 .boot-skip a:hover{color:#000;}
 .xp-item{margin-bottom:12px;}
-.xp-item h3{font-size:8px;margin-bottom:3px;}
+.xp-item h3{font-size:8px;line-height:1.6;margin-bottom:3px;}
 .xp-meta{font-size:6px;color:#777;margin-bottom:5px;}
 .xp-item ul{margin:0 0 0 12px;padding:0;font-size:7px;line-height:2;}
 
@@ -284,35 +284,12 @@ body{
 @keyframes dotPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.8);}}
 .dk-item.running::after{animation:dotPulse 1.2s ease-in-out infinite;}
 
-/* Glitch effect on hover for title bar text */
-@keyframes glitch{
-  0%,100%{text-shadow:none;transform:translate(0);}
-  20%{text-shadow:-1px 0 #000;transform:translate(-1px,0);}
-  40%{text-shadow:1px 0 #000;transform:translate(1px,0);}
-  60%{text-shadow:none;transform:translate(0);}
-}
-.mac-win.active .tb-title:hover{animation:glitch 0.3s steps(2) 1;}
-
-/* Diagonal stripe animation on active titlebar */
-@keyframes stripeScroll{from{background-position:0 0;}to{background-position:6px 0;}}
-.mac-win.active .mac-tb{
-  animation:stripeScroll 0.4s linear infinite;
-}
-
 /* Spinning pixel gear on boot */
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* Desktop icon bounce on hover */
 .dsk-icon:hover canvas{animation:iconBounce 0.3s ease both;}
 @keyframes iconBounce{0%{transform:translateY(0);}40%{transform:translateY(-4px);}100%{transform:translateY(0);}}
-
-/* Window shadow pulse when active */
-@keyframes shadowPulse{
-  0%,100%{box-shadow:4px 4px 0 #000;}
-  50%{box-shadow:5px 5px 0 #000,0 0 0 1px #000;}
-}
-.mac-win.active{animation:shadowPulse 2s ease-in-out infinite;}
-.mac-win.active.win-open-anim{animation:winPop 0.1s ease-out both, shadowPulse 2s ease-in-out 0.1s infinite;}
 
 /* Status bar marquee scroll */
 @keyframes marquee{from{transform:translateX(100%);}to{transform:translateX(-100%);}}
@@ -392,16 +369,19 @@ body{
   background:#fff;
   border-bottom:2px solid #000;
   display:flex;align-items:center;
-  padding:0 4px;gap:4px;
+  padding:3px 4px;gap:4px;
   cursor:grab;
   flex-shrink:0;
   user-select:none;
 }
 .mac-tb:active{cursor:grabbing;}
+/* Classic pinstripes, kept inside the bar's padding; the title and buttons sit on solid patches so no line crosses them. */
 .mac-win.active .mac-tb{
-  background:repeating-linear-gradient(90deg,#000 0,#000 1px,#fff 1px,#fff 3px);
+  background-image:repeating-linear-gradient(0deg,#000 0,#000 1px,#fff 1px,#fff 3px);
+  background-origin:content-box;background-clip:content-box;
 }
-.mac-win.active .mac-tb .tb-title{background:#fff;padding:0 8px;}
+.mac-win.active .mac-tb .tb-title{background:#fff;}
+.mac-win.active .mac-tb .tb-btn{box-shadow:0 0 0 2px #fff;}
 .tb-btn{
   width:13px;height:13px;
   border:1.5px solid #000;
@@ -415,8 +395,9 @@ body{
 }
 .tb-btn:hover{background:#000;color:#fff;}
 .tb-title{
-  flex:1;text-align:center;
-  font-size:8px;
+  flex:0 1 auto;min-width:0;margin:0 auto;padding:0 8px;
+  text-align:center;
+  font-size:8px;line-height:14px;
   pointer-events:none;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
@@ -892,8 +873,9 @@ body{
   /* Make Titlebar bigger for touch */
   .mac-tb {
     height: 38px;
-    padding: 0 8px;
+    padding: 6px 8px;
   }
+  .tb-title { line-height: 24px; }
   .tb-btn {
     width: 24px; height: 24px; font-size: 14px;
   }
@@ -970,9 +952,10 @@ body[data-theme="dark"] .dk-sep{ background:repeating-linear-gradient(180deg,#55
 body[data-theme="dark"] .mac-win{ background:#1e1e1e; border-color:#555; box-shadow:4px 4px 0 #000; }
 body[data-theme="dark"] .mac-tb{ background:#2a2a2a; border-bottom-color:#555; }
 body[data-theme="dark"] .mac-win.active .mac-tb{
-  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+  background-image:repeating-linear-gradient(0deg,#666 0,#666 1px,#2a2a2a 1px,#2a2a2a 3px);
 }
 body[data-theme="dark"] .mac-win.active .mac-tb .tb-title{ background:#2a2a2a; color:#e8e8e8; }
+body[data-theme="dark"] .mac-win.active .mac-tb .tb-btn{ box-shadow:0 0 0 2px #2a2a2a; }
 body[data-theme="dark"] .tb-btn{ border-color:#666; background:#2a2a2a; color:#ddd; }
 body[data-theme="dark"] .tb-btn:hover{ background:#e8e8e8; color:#111; }
 body[data-theme="dark"] .tb-title{ color:#e8e8e8; }
@@ -1383,13 +1366,107 @@ body[data-theme="dark"] #flow-runs{color:#e8e8e8;border-color:#aaa;background-co
 
 /* ── Recruiter-view entry points ── */
 .mb-recruiter{margin-left:auto;align-self:center;font-size:7px;padding:4px 8px;margin-right:6px;background:#000;color:#fff;
-  text-decoration:none;border:2px solid #000;white-space:nowrap;animation:rvpulse 2.4s ease-in-out infinite;}
+  text-decoration:none;border:2px solid #000;white-space:nowrap;}
 .mb-recruiter:hover{background:#fff;color:#000;}
 .mb-recruiter + .mb-right{margin-left:0;}
-@keyframes rvpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,0,0,.5);}50%{box-shadow:0 0 0 4px rgba(0,0,0,0);}}
-@media (prefers-reduced-motion: reduce){ .mb-recruiter{animation:none;} }
 .chat-recruiter{display:block;padding:6px 10px;border-top:2px solid #000;background:#f0f0f0;color:#000;font-size:7px;line-height:1.6;text-decoration:underline;}
 .chat-recruiter:hover{background:#000;color:#fff;}
 body[data-theme="dark"] .mb-recruiter{background:#e8e8e8;color:#111;border-color:#e8e8e8;}
 body[data-theme="dark"] .chat-recruiter{background:#1a1a1a;color:#ddd;border-color:#444;}
 @media (max-width: 768px){ .mb-recruiter{font-size:6px;padding:4px 6px;} }
+
+/* ── Striped headers: the label sits on a solid patch as tall as the bar ── */
+.pc-head span,.ie-fav-title span,#game-header span{display:inline-block;padding-top:2px;padding-bottom:2px;}
+
+/* ── Firefox has no ::-webkit-scrollbar: theme its scrollbars too (kept out of Chromium, where scrollbar-color would
+   switch the striped thumbs above off) ── */
+@supports (-moz-appearance:none){
+  .mac-body,#term-out,#chat-log,#ie-viewport,.ie-fav-bar,.flow-scroll,#flow-log{scrollbar-width:thin;scrollbar-color:#000 #fff;}
+  body[data-theme="dark"] .mac-body,body[data-theme="dark"] #term-out,body[data-theme="dark"] #chat-log,
+  body[data-theme="dark"] #ie-viewport,body[data-theme="dark"] .ie-fav-bar,body[data-theme="dark"] .flow-scroll,
+  body[data-theme="dark"] #flow-log{scrollbar-color:#777 #1e1e1e;}
+}
+
+/* ── Welcome: first-visit mode chooser ───────────────── */
+#welcome,#tour{display:none;position:fixed;inset:0;z-index:6000;}
+#welcome.show{display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);overflow:auto;}
+.wl-box{width:560px;max-width:100%;margin:auto;background:#fff;color:#000;border:3px solid #000;box-shadow:6px 6px 0 #000;animation:winPop .12s ease-out both;}
+.wl-tb{height:24px;padding:4px 6px;border-bottom:2px solid #000;text-align:center;
+  background-image:repeating-linear-gradient(0deg,#000 0,#000 1px,#fff 1px,#fff 3px);background-origin:content-box;background-clip:content-box;}
+.wl-tb span{display:inline-block;background:#fff;padding:0 10px;font-size:8px;line-height:14px;letter-spacing:.08em;}
+.wl-body{padding:20px 22px 16px;}
+.wl-guide{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.guide-face{image-rendering:pixelated;flex:none;border:2px solid #000;background:#fff;animation:guideBob 1.6s steps(2,end) infinite;}
+@keyframes guideBob{50%{transform:translateY(-2px);}}
+/* speech bubble with a pixel tail pointing at the guide */
+.wl-say,#tour-say{position:relative;flex:1;min-width:0;border:2px solid #000;background:#fff;color:#000;padding:10px 12px;font-size:8px;line-height:2;}
+.wl-say{min-height:60px;}
+.wl-say::before,#tour-say::before{content:'';position:absolute;left:-8px;top:16px;width:6px;height:6px;background:#fff;border:2px solid #000;border-right:none;}
+.wl-opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.wl-opt{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;cursor:pointer;
+  font-family:'Press Start 2P',monospace;color:#000;background:#fff;border:2px solid #000;box-shadow:3px 3px 0 #000;padding:14px 14px 12px;
+  transition:transform .08s,box-shadow .08s;}
+.wl-opt canvas{image-rendering:pixelated;width:32px;height:32px;display:block;}
+.wl-opt b{font-size:10px;font-weight:400;letter-spacing:.04em;}
+.wl-opt span{font-size:7px;line-height:2;color:#444;flex:1;}
+.wl-opt i{font-style:normal;font-size:6px;border:1px solid currentColor;padding:3px 6px;align-self:flex-end;}
+.wl-opt:hover,.wl-opt:focus-visible{background:#000;color:#fff;outline:none;transform:translate(-1px,-1px);box-shadow:4px 4px 0 #000,0 0 0 2px #fff inset;}
+.wl-opt:hover span,.wl-opt:focus-visible span{color:#ddd;}
+.wl-opt:hover canvas,.wl-opt:focus-visible canvas{filter:invert(1);}
+.wl-opt:active{transform:translate(3px,3px);box-shadow:none;}
+.wl-foot{margin-top:14px;font-size:6px;line-height:1.8;color:#666;text-align:center;}
+
+/* ── Tour: spotlight + guide card ────────────────────── */
+#tour.show{display:block;}
+#tour [hidden]{display:none !important;}
+/* the hole is a see-through box whose huge shadow dims everything around it */
+#tour-hole{position:fixed;border:2px dashed #fff;box-shadow:0 0 0 2px #000,0 0 0 200vmax rgba(0,0,0,.5);pointer-events:none;
+  transition:left .26s ease,top .26s ease,width .26s ease,height .26s ease;}
+#tour-hole.none{border-color:transparent;box-shadow:0 0 0 200vmax rgba(0,0,0,.5);}
+#tour-card{position:fixed;width:340px;max-width:calc(100vw - 24px);background:#fff;color:#000;border:3px solid #000;box-shadow:5px 5px 0 #000;
+  padding:14px;transition:left .26s ease,top .26s ease;}
+.tour-head{display:flex;align-items:flex-start;gap:14px;}
+#tour-say{min-height:86px;}
+#tour-ask{margin:12px 0 0 62px;font-size:6px;padding:7px 10px;}
+.tour-foot{display:flex;align-items:center;gap:8px;margin-top:14px;}
+#tour-dots{display:flex;gap:4px;}
+#tour-dots i{width:6px;height:6px;border:1px solid #000;background:#fff;}
+#tour-dots i.on{background:#000;}
+#tour-step{font-size:6px;color:#666;margin-right:auto;}
+.tour-link{font-family:'Press Start 2P',monospace;font-size:6px;background:none;border:none;color:#555;text-decoration:underline;cursor:pointer;padding:6px 2px;}
+.tour-link:hover{color:#000;}
+.tour-foot .mac-btn{padding:7px 10px;}
+.tour-foot .mac-btn:disabled{opacity:.35;cursor:default;box-shadow:none;}
+.tour-foot .mac-btn:disabled:hover{background:#fff;color:#000;}
+#tour .mac-btn:focus-visible,.tour-link:focus-visible{outline:2px dashed #000;outline-offset:2px;}
+
+body[data-theme="dark"] .wl-box,body[data-theme="dark"] #tour-card{background:#1e1e1e;color:#e8e8e8;border-color:#777;}
+body[data-theme="dark"] .wl-tb{border-bottom-color:#777;background-image:repeating-linear-gradient(0deg,#666 0,#666 1px,#1e1e1e 1px,#1e1e1e 3px);}
+body[data-theme="dark"] .wl-tb span{background:#1e1e1e;}
+body[data-theme="dark"] .guide-face{filter:invert(1);}
+body[data-theme="dark"] .wl-say,body[data-theme="dark"] #tour-say,
+body[data-theme="dark"] .wl-say::before,body[data-theme="dark"] #tour-say::before{background:#111;color:#e8e8e8;border-color:#999;}
+body[data-theme="dark"] .wl-opt{background:#2a2a2a;color:#e8e8e8;border-color:#999;}
+body[data-theme="dark"] .wl-opt span{color:#bbb;}
+body[data-theme="dark"] .wl-opt canvas{filter:invert(1);}
+body[data-theme="dark"] .wl-opt:hover,body[data-theme="dark"] .wl-opt:focus-visible{background:#e8e8e8;color:#111;box-shadow:4px 4px 0 #000,0 0 0 2px #111 inset;}
+body[data-theme="dark"] .wl-opt:hover span,body[data-theme="dark"] .wl-opt:focus-visible span{color:#333;}
+body[data-theme="dark"] .wl-opt:hover canvas,body[data-theme="dark"] .wl-opt:focus-visible canvas{filter:none;}
+body[data-theme="dark"] .wl-foot,body[data-theme="dark"] #tour-step,body[data-theme="dark"] .tour-link{color:#999;}
+body[data-theme="dark"] #tour-dots i{border-color:#e8e8e8;background:#1e1e1e;}
+body[data-theme="dark"] #tour-dots i.on{background:#e8e8e8;}
+body[data-theme="dark"] .tour-foot .mac-btn:disabled:hover{background:#2a2a2a;color:#ddd;}
+
+@media (max-width:560px){
+  .wl-opts{grid-template-columns:1fr;}
+  .wl-body{padding:16px 14px 12px;}
+  .wl-guide{gap:12px;}
+  .guide-face{width:48px;height:48px;}
+  #tour-ask{margin-left:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .guide-face,.wl-box{animation:none;}
+  #tour-hole,#tour-card,.wl-opt{transition:none;}
+}
+body[data-theme="dark"] .ie-home-logo{border-color:#555 !important;}
+body[data-theme="dark"] .ie-home-logo canvas{filter:invert(1);}

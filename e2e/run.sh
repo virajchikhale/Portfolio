@@ -8,9 +8,9 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="${PYTHON:-python3}"; FF="${FIREFOX:-firefox}"; PORT="${E2E_PORT:-8767}"
 OUT="$HERE/.out"; mkdir -p "$OUT"
-PAGES=("$@"); [ ${#PAGES[@]} -eq 0 ] && PAGES=(pipeline dock agent ui hard)
+PAGES=("$@"); [ ${#PAGES[@]} -eq 0 ] && PAGES=(pipeline dock agent ui hard tour)
 # page:seconds the page is kept alive (slow-mode checks run in real time); hard also runs once with storage blocked
-declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60)
+declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60 [tour]=60)
 
 "$PY" "$HERE/server.py" </dev/null >"$OUT/server.log" 2>&1 & SERVER=$!
 trap 'kill $SERVER 2>/dev/null; pkill -x firefox 2>/dev/null; pkill -x firefox-bin 2>/dev/null; rm -rf "${TMPDIR:-/tmp}"/e2e-ffprof.*' EXIT
@@ -23,7 +23,7 @@ run_page() {  # name, query-string
   rm -f "$OUT/report.json"; pkill -x firefox 2>/dev/null; pkill -x firefox-bin 2>/dev/null; sleep 1
   local prof; prof="$(mktemp -d "${TMPDIR:-/tmp}/e2e-ffprof.XXXX")"   # FRESH each time (a reused one gets corrupted by kills); outside the repo: Firefox failed to start with a profile under it
   timeout $((keep + 90)) "$FF" --headless --no-remote --profile "$prof" --window-size=1300,900 \
-    "http://127.0.0.1:$PORT/t.html?page=${query}&d=${keep}&skipboot=1" </dev/null >/dev/null 2>&1 &
+    "http://127.0.0.1:$PORT/t.html?page=${query}&d=${keep}&skipboot=1&open=none" </dev/null >/dev/null 2>&1 &
   for _ in $(seq 1 $((keep + 80))); do
     "$PY" - <<PYEOF 2>/dev/null && break
 import json, sys

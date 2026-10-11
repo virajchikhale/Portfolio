@@ -306,6 +306,15 @@ function drawMac(canvas){
     c.strokeRect(Math.round(w*0.35),Math.round(h*0.72),Math.round(w*0.3),Math.round(h*0.06));
   });
 }
+function drawDoc(canvas){
+  px(canvas,(c,w,h)=>{
+    c.strokeStyle='#000';c.lineWidth=1.5;
+    c.strokeRect(Math.round(w*0.2),Math.round(h*0.09),Math.round(w*0.6),Math.round(h*0.82));
+    c.fillStyle='#000';
+    c.fillRect(Math.round(w*0.31),Math.round(h*0.22),Math.round(w*0.38),3);
+    for(let i=0;i<4;i++) c.fillRect(Math.round(w*0.31),Math.round(h*0.4)+i*4,Math.round(w*(i===3?0.22:0.38)),1.5);
+  });
+}
 function drawAvatar(canvas){
   px(canvas,(c,w,h)=>{
     // head
@@ -412,12 +421,25 @@ function initOS(){
   drawAvatar(document.getElementById('av-canvas'));
   // Clock
   startClock();
-  // Land visitors on the AI: open the chat on desktop widths (not for automated browsers, so e2e starts clean).
-  // Opens VC·AI, Flow, About and Skills in an aligned layout; ?open=none keeps the desktop as it was.
+  // Phones show windows full-screen, so start on the home screen instead of inside About.
+  if(window.innerWidth <= 768){
+    document.getElementById('win-about').style.display = 'none';
+    document.getElementById('dk-about').classList.remove('running');
+  }
+  // First visit: ask whether to explore the desktop or read the recruiter page, then give a short tour (tour.js).
+  // After that, land on VC·AI next to About. Not for automated browsers, so e2e starts clean; ?open=none keeps the
+  // desktop as it was, ?welcome forces the chooser.
   try{
-    const want = new URLSearchParams(location.search).get('open');
-    if(want !== 'none' && !navigator.webdriver && window.innerWidth > 768 && typeof chatOpen === 'function'){
-      setTimeout(()=>{ landingLayout(); setTimeout(landingLayout, 500); const i = document.getElementById('chat-in'); if(i) i.focus(); if(AI.online === null) aiPing(); }, 250);
+    const q = new URLSearchParams(location.search);
+    const quiet = q.get('open') === 'none' || (navigator.webdriver && !q.has('welcome'));
+    const land = ()=>{
+      if(window.innerWidth > 768){ landingLayout(); const i = document.getElementById('chat-in'); if(i) i.focus(); }
+      if(AI.online === null) aiPing();
+      if(!Tour.seen()) setTimeout(()=>Tour.start(), 450);
+    };
+    if(!quiet){
+      if(q.has('welcome') || Welcome.needed()) Welcome.show(land);
+      else setTimeout(land, 250);
     }
   }catch(e){}
   // Register window mousedown for focus
@@ -484,31 +506,38 @@ function placeChatFlow(){
   flow.style.width=fw+'px'; flow.style.left=(left+cw+gap)+'px'; flow.style.top='24px';
 }
 
-// Landing layout: VC·AI | Flow Monitor | About over Skills, all aligned and non-overlapping.
-// Needs room (the icon strip on the right takes ~110px); on narrower screens only chat + Flow are shown.
+// Landing layout: VC·AI with About beside it, both at a modest size so the desktop, its icons and the dock stay in view.
+// About is left out when there is no room for it next to the chat (the icon strip on the right takes ~110px).
 function landingLayout(){
   const desk = document.getElementById('desktop');
   const dw = desk.clientWidth, dh = desk.clientHeight;
-  const pad = 10, gap = 10, icons = 110, top = 10;
-  const wide = dw >= 1100;
-  const h = Math.max(300, dh - top - pad);
-  const chatW = 380, sideW = wide ? 290 : 0;
-  const flowW = Math.max(360, dw - icons - pad - chatW - gap - (wide ? sideW + gap : 0) - (wide ? 0 : 0));
+  const icons = 110, gap = 28, top = Math.min(40, Math.max(12, Math.round(dh * 0.05)));
+  const chatW = 380, aboutW = 380;
+  const chatH = Math.max(280, Math.min(440, dh - top - 48));
+  const room = dw - icons;
+  const both = room >= chatW + gap + aboutW + 32;
+  const left = both ? Math.max(16, Math.min(Math.round(dw * 0.07), room - (chatW + gap + aboutW) - 16)) : Math.max(8, Math.min(48, room - chatW));
   const set = (id, l, t, w, hh)=>{
     const el = document.getElementById(id);
-    el.style.left = l+'px'; el.style.top = t+'px'; el.style.width = w+'px'; el.style.height = hh+'px';
+    el.style.left = l+'px'; el.style.top = t+'px'; el.style.width = w+'px'; el.style.height = hh ? hh+'px' : '';
+    el.dataset.zoomed = '0';
   };
   const openQuiet = id=>{ const el = document.getElementById(id); if(el.style.display==='none') openWin(id); };
-  if(wide){ openQuiet('win-about'); openQuiet('win-skills'); }
-  openQuiet('win-flow'); openQuiet('win-chat');
-  set('win-chat', pad, top, chatW, h);
-  set('win-flow', pad+chatW+gap, top, flowW, h);
-  if(wide){
-    const sx = pad+chatW+gap+flowW+gap, hh = Math.floor((h-gap)/2);
-    set('win-about', sx, top, sideW, hh);
-    set('win-skills', sx, top+hh+gap, sideW, h-hh-gap);
-  }
+  if(both){ openQuiet('win-about'); set('win-about', left + chatW + gap, top + 36, aboutW, 0); }
+  openQuiet('win-chat');
+  set('win-chat', left, top, chatW, chatH);
   bringFront('win-chat');
+}
+
+// Keep a window that is being opened inside the desktop: nudge it up/left, and shrink it only if it still does not fit.
+function fitWin(el){
+  if(window.innerWidth <= 768) return;
+  const desk = document.getElementById('desktop');
+  const dw = desk.clientWidth, dh = desk.clientHeight, pad = 8;
+  if(el.offsetHeight > dh - 2*pad) el.style.height = (dh - 2*pad) + 'px';
+  if(el.offsetWidth > dw - 2*pad) el.style.width = (dw - 2*pad) + 'px';
+  if(el.offsetTop + el.offsetHeight > dh - pad) el.style.top = Math.max(pad, dh - pad - el.offsetHeight) + 'px';
+  if(el.offsetLeft + el.offsetWidth > dw - pad) el.style.left = Math.max(pad, dw - pad - el.offsetWidth) + 'px';
 }
 
 function openWin(id){
@@ -518,6 +547,8 @@ function openWin(id){
   // remove animation class so we can re-add it
   el.classList.remove('win-open-anim');
   el.style.display = 'flex';
+  if(el.dataset.zoomed !== '1') fitWin(el);
+  if(id==='win-ie' && ieHPos < 0 && !document.getElementById('ie-page-content').firstChild) ieRenderHome();
   // trigger reflow for animation
   void el.offsetWidth;
   el.classList.add('win-open-anim');
@@ -572,7 +603,8 @@ function toggleWin(id){
 
 function closeAll(){
   mbCloseAll();
-  Object.keys(WIN_DOCK).forEach(closeWin);
+  // every open window, including ones without a dock icon (Experience)
+  document.querySelectorAll('.mac-win').forEach(w=>{ if(w.style.display !== 'none') closeWin(w.id); });
 }
 
 function zoomWin(id){
@@ -648,10 +680,11 @@ document.addEventListener('mousemove', e=>{
   if(!drag) return;
   const el = document.getElementById(drag.id);
   const desk = document.getElementById('desktop');
-  const mbH = document.getElementById('menubar').offsetHeight;
-  const maxY = mbH + desk.clientHeight - 22; // keep titlebar visible
-  const ny = Math.max(mbH, Math.min(maxY, e.clientY - drag.oy));
-  const nx = Math.max(-el.offsetWidth + 60, e.clientX - drag.ox);
+  // style.top/left are relative to the desktop, the pointer is in viewport coordinates
+  const dr = desk.getBoundingClientRect();
+  const maxY = desk.clientHeight - 22; // keep titlebar visible
+  const ny = Math.max(0, Math.min(maxY, e.clientY - drag.oy - dr.top));
+  const nx = Math.max(-el.offsetWidth + 60, Math.min(desk.clientWidth - 60, e.clientX - drag.ox - dr.left));
   el.style.left = nx + 'px';
   el.style.top  = ny + 'px';
 });
@@ -706,6 +739,7 @@ const CMDS = {
       '<span class="t-out">  ie       &mdash; launch browser</span>',
       '<span class="t-out">  open [url] &mdash; browse URL</span>',
       '<span class="t-out">  date     &mdash; current time</span>',
+      '<span class="t-out">  tour     &mdash; replay the guided tour</span>',
       '<span class="t-out">  matrix   &mdash; neural matrix</span>',
       '<span class="t-out">  clear    &mdash; clear screen</span>',
       '<span class="t-out">  dark     &mdash; dark mode</span>',
@@ -730,6 +764,7 @@ const CMDS = {
   agent:    ()=>{ snd('click'); const on = AI.mode !== 'agent'; AI.setMode(on ? 'agent' : 'pipeline'); return `<span class="t-out">Agent mode ${on ? 'ON: the model decides which tools to call (see the Flow Monitor)' : 'OFF: fast fixed pipeline'}.</span>`; },
   chat:     ()=>{ snd('open'); chatOpen(); return `<span class="t-out">Opening VC\u00B7AI...</span>`; },
   ie:       ()=>{ snd('open'); openWin('win-ie'); return `<span class="t-out">Launching Internet Explorer...</span>`; },
+  tour:     ()=>{ snd('open'); setTimeout(()=>Tour.start(),200); return `<span class="t-out">Starting the tour...</span>`; },
   date:     ()=>{ snd('click'); return `<span class="t-out">${new Date().toLocaleString()}</span>`; },
   matrix:   ()=>{ snd('chime'); startMatrixEgg(); return `<span class="t-out">INITIATING NEURAL MATRIX...</span>`; },
   dark:     ()=>{ snd('click'); setTheme('dark');  return `<span class="t-out">Theme set to DARK MODE. Type 'light' to switch back.</span>`; },
@@ -1043,15 +1078,20 @@ function ieRenderHome(){
   const wrap = document.createElement('div');
   wrap.className = 'ie-home-screen';
   wrap.innerHTML = `
-    <div style="border:2px solid #000;padding:8px;">${c.outerHTML}</div>
+    <div class="ie-home-logo" style="border:2px solid #000;padding:8px;"></div>
     <div class="ie-home-title">Internet Explorer</div>
     <div class="ie-home-sub">VC\u00B7OS Browser v1.0<br>Type a URL above or click a Favorite to browse.</div>
     <div class="ie-home-links">
-      <span class="ie-home-link" onclick="ieOpen('https://github.com/virajchikhale')">GitHub</span>
-      <span class="ie-home-link" onclick="ieOpen('https://linkedin.com/in/virajchikhale')">LinkedIn</span>
-      <span class="ie-home-link" onclick="ieOpen('https://virajchikhale.github.io/')">Portfolio</span>
-      <span class="ie-home-link" onclick="ieOpen('https://google.com')">Google</span>
-    </div>`;
+    <div class="ie-home-links"></div>`;
+  wrap.querySelector('.ie-home-logo').appendChild(c);   // the element itself: outerHTML would drop what was drawn on it
+  // shortcuts come from the config, so they never drift from the links shown in About
+  const links = wrap.querySelector('.ie-home-links');
+  CONFIG.links.filter(l=>l.action==='ie' && l.url).forEach(l=>{
+    const a = document.createElement('span');
+    a.className = 'ie-home-link'; a.textContent = l.label;
+    a.addEventListener('click', ()=>ieOpen(l.url));
+    links.appendChild(a);
+  });
   el.appendChild(wrap);
 }
 
@@ -2251,14 +2291,6 @@ function startMatrixEgg(){
   },80);
 }
 
-/* CRT menubar flicker */
-function initMenubarFlicker(){
-  const mb=document.getElementById('menubar');
-  setInterval(()=>{
-    if(Math.random()>0.97){mb.style.opacity='0.82';setTimeout(()=>{mb.style.opacity='1';},55);}
-  },350);
-}
-
 /* Blinking clock colon */
 function startClock(){
   const el=document.getElementById('mb-clock');
@@ -2291,6 +2323,8 @@ window.openWin=function(id){snd('open');_openWinBase(id);setTimeout(()=>flashTit
 /* Desktop icon wobble */
 function dskSelect(el){
   dskClearAll();el.classList.add('sel');
+  // touch layouts have no double-click: one tap opens
+  if(window.innerWidth<=768 && typeof el.ondblclick==='function'){ el.ondblclick(); return; }
   const cv=el.querySelector('canvas');if(!cv)return;
   cv.style.transition='transform 0.08s';
   cv.style.transform='rotate(-5deg) scale(1.1)';
@@ -2332,6 +2366,5 @@ animateBootLabel();
 runBoot();
 const _bootDur=300+9*340+760;
 setTimeout(initPixelRain,   _bootDur);
-setTimeout(initMenubarFlicker,_bootDur+200);
 setTimeout(initDockFlash,   _bootDur+100);
 
