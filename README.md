@@ -262,7 +262,7 @@ The backend is never published to the host; only nginx is. The API key exists on
 
 ## Configuration (all env vars — see `.env.example`)
 `LLM_PROVIDER` (`gemini` | `openai` | `fake`), `LLM_MODEL`, `GEMINI_API_KEY`, `LLM_BASE_URL` / `LLM_API_KEY` (OpenAI-compatible providers), token/rate/budget limits, `CORS_ORIGINS`, `ENVIRONMENT`.
-The `openai` provider (`backend/app/llm/openai_compat.py`) covers Groq, Ollama and other OpenAI-compatible endpoints. A recruiter-oriented view is served at `/recruiter.html`. Add a provider by implementing `LLMClient` in `backend/app/llm/` and registering it in `factory.py`.
+The `openai` provider (`backend/app/llm/openai_compat.py`) covers Groq, Ollama and other OpenAI-compatible endpoints. A recruiter-oriented view is served at `/recruiter.html`. On a first visit the desktop asks which of the two to open and, for the desktop, gives a five-step guided tour (`frontend/tour.js`; replay it from HELP > Take the Tour, force the chooser with `?welcome`, skip everything with `?open=none`). Add a provider by implementing `LLMClient` in `backend/app/llm/` and registering it in `factory.py`.
 
 ## Security model
 | Threat | Mitigation |

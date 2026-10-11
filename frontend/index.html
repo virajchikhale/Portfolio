@@ -96,6 +96,7 @@
     <div class="mb-item" id="mb-help" onclick="mbToggle('mb-help')">HELP
       <div class="mb-dropdown">
         <div class="dd-row" onclick="termRun('help')">Commands</div>
+        <div class="dd-row" onclick="mbCloseAll();Tour.start()">Take the Tour</div>
         <div class="dd-row" onclick="showAlert('Double-click desktop icons to open.\nDrag windows by title bar.\nResize from bottom-right corner.')">How to Use</div>
       </div>
     </div>
@@ -442,6 +443,53 @@
 
 </div><!-- /os -->
 
+<!-- WELCOME: first-visit mode chooser (see tour.js) -->
+<div id="welcome" role="dialog" aria-modal="true" aria-labelledby="wl-title">
+  <div class="wl-box">
+    <div class="wl-tb"><span id="wl-title">WELCOME</span></div>
+    <div class="wl-body">
+      <div class="wl-guide">
+        <canvas id="wl-guide" class="guide-face" width="64" height="64" aria-hidden="true"></canvas>
+        <p class="wl-say" id="wl-say"></p>
+      </div>
+      <div class="wl-opts">
+        <button type="button" class="wl-opt" id="wl-os">
+          <canvas id="wl-ic-os" width="32" height="32" aria-hidden="true"></canvas>
+          <b>OS MODE</b>
+          <span>A retro desktop you can play with: windows, a terminal and a live AI. Starts with a one-minute tour.</span>
+          <i>ENTER</i>
+        </button>
+        <button type="button" class="wl-opt" id="wl-rv">
+          <canvas id="wl-ic-rv" width="32" height="32" aria-hidden="true"></canvas>
+          <b>RECRUITER MODE</b>
+          <span>One clean page: experience, projects and results in plain language. A two-minute read.</span>
+          <i>OPEN</i>
+        </button>
+      </div>
+      <p class="wl-foot">You can switch at any time from the menu bar.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TOUR: spotlight + guide card (see tour.js) -->
+<div id="tour" role="dialog" aria-modal="true" aria-label="Desktop tour">
+  <div id="tour-hole"></div>
+  <div id="tour-card">
+    <div class="tour-head">
+      <canvas id="tour-guide" class="guide-face" width="48" height="48" aria-hidden="true"></canvas>
+      <p id="tour-say" aria-live="polite"></p>
+    </div>
+    <button type="button" class="mac-btn" id="tour-ask" hidden>TRY IT: ASK A SAMPLE QUESTION</button>
+    <div class="tour-foot">
+      <span id="tour-dots" aria-hidden="true"></span>
+      <span id="tour-step"></span>
+      <button type="button" class="tour-link" id="tour-skip">SKIP</button>
+      <button type="button" class="mac-btn" id="tour-back">BACK</button>
+      <button type="button" class="mac-btn inv" id="tour-next">NEXT</button>
+    </div>
+  </div>
+</div>
+
 <!-- ALERT -->
 <div id="mac-alert">
   <div class="alert-box">
@@ -456,6 +504,7 @@
     <script src="ai.js"></script>
     <script src="flow.js"></script>
     <script src="activity.js"></script>
+    <script src="tour.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
