@@ -19,6 +19,9 @@ export class FakeClient implements LLMClient {
       yield { type: "turn", text: "", toolCalls: [{ name: "load_skill", args: { name: skill }, id: "fake-1" }] };
     } else if (tools.length && !done.some((r) => r.call.name === "search_portfolio") && names.has("search_portfolio")) {
       yield { type: "turn", text: "", toolCalls: [{ name: "search_portfolio", args: { query: q }, id: "fake-2" }] };
+    } else if (tools.length && names.has("suggest_action") && q.includes("read me") && !done.some((r) => r.call.name === "suggest_action")) {
+      // Deterministic trigger for tests: a question that mentions the Read Me gets a button offered.
+      yield { type: "turn", text: "", toolCalls: [{ name: "suggest_action", args: { id: "readme" }, id: "fake-3" }] };
     } else {
       const found = String(done.find((r) => r.call.name === "search_portfolio")?.response.result ?? "");
       const first = found.split("\n").find((l) => l.startsWith("[1]"));

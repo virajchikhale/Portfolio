@@ -15,6 +15,13 @@ describe.each([["pipeline", pipeline], ["agent", agent]])("%s prompt", (_name, p
     expect(prompt).toMatch(/Never cite a source\s+you did not use|never cite a source\s+you did not use/i);
   });
 
+  it("asks for a citation marker right after each sourced fact (the page shows only sources the answer cites)", () => {
+    // the pipeline prompt carries the full rule; the agent prompt has its own tool-result wording
+    expect(pipeline).toMatch(/put that source's number right after it in square brackets/);
+    expect(pipeline).toMatch(/any answer built from CONTEXT needs at least one/);
+    expect(agent).toMatch(/Cite sources inline exactly as numbered in tool results/);
+  });
+
   it("is conversational: remembers the visitor and is not a stiff refusal machine", () => {
     expect(prompt).toMatch(/remember what they said\s+earlier in this conversation/);
     expect(prompt).toMatch(/Greet people back/);
@@ -32,6 +39,20 @@ describe.each([["pipeline", pipeline], ["agent", agent]])("%s prompt", (_name, p
   it("includes the core facts and the skill catalog", () => {
     expect(prompt).toContain(core.trim().slice(0, 40));
     for (const name of Object.keys(skills)) expect(prompt).toContain(name);
+  });
+});
+
+describe("page actions in the prompts", () => {
+  it("the agent prompt explains suggest_action as a button the visitor must click, and never as done", () => {
+    expect(agent).toMatch(/suggest_action offers the visitor a BUTTON/);
+    expect(agent).toMatch(/nothing happens unless they click it/);
+    expect(agent).toMatch(/Never say an action was done/);
+    expect(agent).toMatch(/button appears right under your message by itself/);
+    expect(agent).toMatch(/never offer to "show" it/);
+    expect(agent).toMatch(/never offer more than two/i);
+  });
+  it("the pipeline prompt has no tools, so it never mentions suggest_action", () => {
+    expect(pipeline).not.toMatch(/suggest_action/);
   });
 });
 

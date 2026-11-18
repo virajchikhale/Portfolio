@@ -61,15 +61,15 @@ export async function POST(request: Request): Promise<Response> {
       case "ping":
         return ok(msg.id, {});
       case "tools/list":
-        return ok(msg.id, { tools: Object.values(state.tools).map((t) => ({
+        return ok(msg.id, { tools: Object.values(state.tools).filter((t) => !t.agentOnly).map((t) => ({
           name: t.spec.name, description: t.spec.description, inputSchema: t.spec.parameters,
           annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } })) });
       case "tools/call": {
         const name = String(msg.params?.name ?? "");
-        const tool = Object.hasOwn(state.tools, name) ? state.tools[name] : undefined;
+        const tool = Object.hasOwn(state.tools, name) && !state.tools[name]!.agentOnly ? state.tools[name] : undefined;
         if (!tool) return fail(msg.id, -32602, `Unknown tool: ${name}`);
         const out = await runTool(tool, { settings: s, skills: state.skills, chunks: state.chunks, rag: state.rag,
-          book: new SourceBook() }, msg.params?.arguments ?? {});
+          book: new SourceBook(), actions: [] }, msg.params?.arguments ?? {});
         // An EXPECTED failure becomes a clean isError result (message kept, no stack trace).
         return ok(msg.id, { content: [{ type: "text", text: out.isError ? out.text.replace(/^Error: /, "") : out.text }],
           isError: Boolean(out.isError) });

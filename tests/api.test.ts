@@ -116,3 +116,26 @@ describe("telemetry + stats", () => {
     expect(runs.every((r: any) => r.question === null)).toBe(true);
   });
 });
+
+describe("page actions over the wire", () => {
+  it("agent mode streams the offered action as ids only; the model's words never carry a command", async () => {
+    const { items, done } = parseSse(await (await chat.POST(chatRequest({ message: "show me the read me", mode: "agent" }))).text());
+    expect(done).toBe(true);
+    const actions = items.filter((i) => i.actions);
+    expect(actions.length).toBeGreaterThan(0);
+    expect(actions.at(-1)!.actions).toEqual([{ id: "readme" }]);
+    expect(JSON.stringify(actions)).not.toMatch(/label|url|href|http/i);
+    expect(items.some((i) => i.trace?.label === "Tool: suggest_action")).toBe(true);
+    expect(text(items)).toContain("[fake-agent]");
+  });
+
+  it("pipeline mode has no tools, so it never sends an action", async () => {
+    const { items } = parseSse(await (await chat.POST(chatRequest({ message: "show me the read me", mode: "pipeline" }))).text());
+    expect(items.some((i) => "actions" in i)).toBe(false);
+  });
+
+  it("a question that does not mention it gets no action in agent mode either", async () => {
+    const { items } = parseSse(await (await chat.POST(chatRequest({ message: "What did he do at Inorbvict?", mode: "agent" }))).text());
+    expect(items.some((i) => "actions" in i)).toBe(false);
+  });
+});

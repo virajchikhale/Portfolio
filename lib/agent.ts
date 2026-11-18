@@ -126,6 +126,7 @@ export async function* runAgent(deps: AgentDeps, history: TranscriptEntry[], que
         yield* flush(tracer);
       }
       if (toolCtx.book.chunks.length) yield { sources: toolCtx.book.asEvents() }; // the UI keeps the latest list
+      if (toolCtx.actions.length) yield { actions: toolCtx.actions.map((id) => ({ id })) }; // ids only; the page owns the labels
       transcript.push({ type: "results", results });
     }
   } catch (err) {

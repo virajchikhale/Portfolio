@@ -10,9 +10,10 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="${PYTHON:-python3}"; FF="${FIREFOX:-firefox}"; PORT="${E2E_PORT:-8767}"
 OUT="$HERE/.out"; mkdir -p "$OUT"
-PAGES=("$@"); [ ${#PAGES[@]} -eq 0 ] && PAGES=(pipeline dock agent ui hard tour session)
+PAGES=("$@")
+if [ ${#PAGES[@]} -eq 0 ]; then PAGES=(pipeline dock agent ui hard tour session); [ "${E2E_BACKEND:-py}" = ts ] && PAGES+=(actions); fi   # actions needs the TS backend (agent-mode offers)
 # page:seconds the page is kept alive (slow-mode checks run in real time); hard also runs once with storage blocked
-declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60 [tour]=60 [session]=60)
+declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60 [tour]=60 [session]=60 [actions]=60)
 
 if [ "${E2E_BACKEND:-py}" = ts ]; then
   docker rm -f e2e-ts-server >/dev/null 2>&1

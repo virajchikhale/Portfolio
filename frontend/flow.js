@@ -43,7 +43,7 @@ const FLOW_LAYOUTS = {
       'fuse>prompt':'M150 294 V306', 'prompt>llm':'M150 350 V362'}},
 };
 const SVGNS = 'http://www.w3.org/2000/svg';
-const TOOL_LABELS = {search_portfolio:'SEARCH', load_skill:'LOAD SKILL', list_projects:'LIST PROJECTS', get_project:'GET PROJECT'};
+const TOOL_LABELS = {search_portfolio:'SEARCH', load_skill:'LOAD SKILL', list_projects:'LIST PROJECTS', get_project:'GET PROJECT', suggest_action:'OFFER ACTION'};
 
 /* Agent mode draws a chain that GROWS as the model decides: rate limit -> guardrails -> think -> tool -> think ...
    Wide windows snake across 3 columns; narrow ones stack vertically. */

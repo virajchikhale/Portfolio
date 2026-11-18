@@ -10,13 +10,14 @@ const chunks = loadChunks();
 const tools = buildTools(skills);
 
 async function ctx(): Promise<ToolContext> {
-  return { settings, skills, chunks, rag: await buildRag(chunks, settings), book: new SourceBook() };
+  return { settings, skills, chunks, rag: await buildRag(chunks, settings), book: new SourceBook(), actions: [] };
 }
 const call = async (name: string, args: unknown, c?: ToolContext) => runTool(tools[name]!, c ?? (await ctx()), args);
 
 describe("tools", () => {
-  it("registry exposes the four read-only tools, with the skill names as an enum", () => {
-    expect(Object.keys(tools).sort()).toEqual(["get_project", "list_projects", "load_skill", "search_portfolio"]);
+  it("registry: four read-only tools plus the agent-only suggest_action, with the skill names as an enum", () => {
+    expect(Object.keys(tools).sort()).toEqual(["get_project", "list_projects", "load_skill", "search_portfolio", "suggest_action"]);
+    expect(Object.values(tools).filter((t) => t.agentOnly).map((t) => t.spec.name)).toEqual(["suggest_action"]);
     expect((tools.load_skill!.spec.parameters as any).properties.name.enum).toContain("about-viraj");
   });
   it("search returns numbered sources and keeps numbering across calls", async () => {
