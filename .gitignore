@@ -1,9 +1,13 @@
 .env
 .env.*
 !.env.example
+!.env.vercel.example
 __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
 .ruff_cache/
 models/
+node_modules/
+.vercel/
+*.tsbuildinfo
