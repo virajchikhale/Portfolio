@@ -54,7 +54,7 @@ async function* agent(state: AppState, { history, text, query, tracer, signal }:
   const s = state.settings;
   yield* drain(tracer);
   const deps: AgentDeps = { llm: state.llm, tools: state.tools, system: state.agentPrompt, settings: s,
-    toolCtx: { settings: s, skills: state.skills, chunks: state.chunks, rag: state.rag, book: new SourceBook() } };
+    toolCtx: { settings: s, skills: state.skills, chunks: state.chunks, rag: state.rag, book: new SourceBook(), actions: [] } };
   const transcript: TranscriptEntry[] = history.map((m) => ({ type: "message", ...m }));
   let produced = false;
   let failure: string | null = null;

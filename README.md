@@ -217,6 +217,20 @@ browser tab never delays a chat answer, and closing the monitor releases any hel
   What is read back is treated as untrusted (validated, size-capped, shown with `textContent`), and the server screens
   replayed history like live input. Failed or blocked turns are never saved, and with storage blocked the chat simply works
   without saving. The model still receives only the last 6 turns.
+* **Page actions: the chat can do things, but only the visitor decides.** `frontend/actions.js` holds a fixed registry of
+  13 actions (dark/light theme, open About / Skills / Experience / Projects / Terminal / Contact / Flow / Activity, the tour,
+  new chat, and the Read Me). There are no arguments, no external links and nothing that sends data; unknown ids do nothing.
+  * A command the visitor **types on its own** ("dark mode", "open projects", "turn off dark mode") runs at once in the browser:
+    no server call, no model call, nothing saved. Only a short message that is *nothing but* a command matches, so
+    "what is his dark mode experience?" still goes to the model.
+  * Anything else is a **button**: after an answer the page offers one from what the *visitor* asked ("give me a quick summary"
+    offers the Read Me), and in agent mode the model can offer one through the `suggest_action` tool. A model can only propose:
+    its tool sends ids, the page draws the button with its own wording, and the click is the consent. The Read Me, which leaves
+    the desktop, always needs that click (or a typed "yes").
+  * A typed "yes" answers the offer currently on screen, for the next message only. Offers are not saved with the chat.
+  * `suggest_action` is agent-only (pipeline mode has no tools) and is neither listed nor callable over MCP. The server-side
+    allowlist is `lib/actions.ts`; a test keeps it identical to the page's registry. Tool calls show in the Flow Monitor as
+    OFFER ACTION.
 * **Sources shown under an answer are only the ones it cites** (`[1]`, `[2]`): retrieval runs for every question, so a
   greeting would otherwise list sources it never used.
 

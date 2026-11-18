@@ -44,3 +44,12 @@ describe("/mcp", () => {
     expect(statuses.slice(5)).toEqual([429, 429]);
   });
 });
+
+describe("/mcp and the agent-only tool", () => {
+  it("never lists or runs suggest_action (it needs the chat page's UI)", async () => {
+    const list = await (await rpc({ jsonrpc: "2.0", id: 9, method: "tools/list" }, "mcp-token", "4.4.4.4")).json();
+    expect(list.result.tools.map((t: any) => t.name)).not.toContain("suggest_action");
+    const call = await (await rpc({ jsonrpc: "2.0", id: 10, method: "tools/call", params: { name: "suggest_action", arguments: { id: "readme" } } }, "mcp-token", "4.4.4.4")).json();
+    expect(call.error.code).toBe(-32602);
+  });
+});

@@ -125,7 +125,7 @@ function aiErrorMessage(status, body){
  * when the answer is grounded in retrieved sources.
  * Resolves with the full answer; rejects with Error(message) (message is display-safe).
  */
-async function aiAsk(message, onDelta, onSources){
+async function aiAsk(message, onDelta, onSources, onActions){
   if(AI.busy) throw new Error('Still answering the previous question…');
   AI.busy = true;
   const flow = (typeof Flow !== 'undefined') ? Flow : null;
@@ -175,6 +175,7 @@ async function aiAsk(message, onDelta, onSources){
         if(evt.trace){ if(flow) flow.push(evt.trace); continue; }
         if(evt.error) throw new Error(evt.error);
         if(Array.isArray(evt.sources)){ if(onSources) onSources(evt.sources); continue; }
+        if(Array.isArray(evt.actions)){ if(onActions) onActions(evt.actions); continue; }   // ids only: Actions owns every label
         if(evt.delta){ full += evt.delta; emit(evt.delta); }
       }
     }
@@ -248,6 +249,50 @@ function chatAppendSources(row, sources){
   log.scrollTop = log.scrollHeight;
 }
 
+/* ── Page actions in the chat (see actions.js) ─────────────────────────────────────────────────────────────────── */
+
+/* A line of buttons under a message: "Want the one-page version?  [OPEN READ ME]". Only ids that exist in Actions are
+   drawn (so a bad id from anywhere is simply ignored), and the wording is Actions' own. The first offer is the one a
+   typed "yes" answers, for the next message only. */
+function chatAppendActions(row, ids){
+  const good = ids.filter(id=>Actions.has(id));
+  if(!good.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-actions';
+  const q = document.createElement('span');
+  q.className = 'chat-actions-q';
+  q.textContent = Actions.registry[good[0]].offer || 'Want me to do that?';
+  wrap.appendChild(q);
+  good.forEach(id=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chat-link'; b.textContent = Actions.registry[id].label;
+    b.addEventListener('click', ()=>{ Actions.pending = null; Actions.run(id); });
+    wrap.appendChild(b);
+  });
+  row.appendChild(wrap);
+  Actions.pending = good[0];
+  const log = document.getElementById('chat-log'); log.scrollTop = log.scrollHeight;
+}
+
+/* A command typed on its own, or "yes" to the offer on screen. No server call, no model call, nothing saved: this is
+   the page answering, not a conversation turn. */
+function chatDoAction(text, id, fromYes){
+  const sugg = document.getElementById('chat-suggest'); if(sugg) sugg.remove();
+  chatAppend('user', text);
+  const a = Actions.registry[id];
+  if(a.confirm && !fromYes){
+    // leaves the desktop: show a button instead of going straight away
+    const body = chatAppend('ai', 'Sure. Open the Read Me page?');
+    body.classList.add('chat-note');
+    chatAppendActions(body.parentElement, [id]);
+  }else{
+    const body = chatAppend('ai', a.done);
+    body.classList.add('chat-note');
+    Actions.run(id);
+  }
+  chatRenderMeta();
+}
+
 function chatOpen(){
   openWin('win-chat');
   if(AI.online === null) aiPing();
@@ -280,6 +325,7 @@ function chatReset(){
   if(AI.busy) return;
   AISession.clear();
   AI.history = [];
+  Actions.pending = null;
   document.querySelectorAll('#chat-log .chat-msg').forEach((el, i)=>{ if(i > 0) el.remove(); });
   let sugg = document.getElementById('chat-suggest');
   if(!sugg){
@@ -312,12 +358,17 @@ async function chatSend(preset){
   if(!text || AI.busy) return;
   if(AISession.isStale()) chatReset();     // the tab sat open past the session's lifetime: start fresh
   input.value = '';
+  // Page actions never reach the model: a command typed on its own, or "yes" to the offer on screen (good for one message).
+  const offered = Actions.pending; Actions.pending = null;
+  const yes = !!(offered && Actions.isYes(text));
+  const typed = yes ? offered : Actions.match(text);
+  if(typed){ chatDoAction(text, typed, yes); input.focus(); return; }
   const sugg = document.getElementById('chat-suggest');
   if(sugg) sugg.remove();
 
   chatAppend('user', text);
   const out = chatAppend('ai', '…');
-  let started = false, sources = [];
+  let started = false, sources = [], proposed = [];
   const clearBtn = document.getElementById('chat-clear');
   sendBtn.disabled = true; input.disabled = true; if(clearBtn) clearBtn.disabled = true;
   try{
@@ -326,10 +377,12 @@ async function chatSend(preset){
       out.textContent += chunk;
       const log = document.getElementById('chat-log');
       log.scrollTop = log.scrollHeight;
-    }, s=>{ sources = s; });
+    }, s=>{ sources = s; }, a=>{ proposed = a; });
     const cited = aiCitedSources(answer, sources);
     if(cited.length) chatAppendSources(out.parentElement, cited);
     AISession.append(text, answer, cited);
+    // Buttons: what the model proposed (agent mode) plus offers driven by what the VISITOR asked. Not saved with the chat.
+    chatAppendActions(out.parentElement, Actions.merge(proposed, Actions.offersFor(text)));
   }catch(e){
     out.textContent = e.message;
     out.classList.add('chat-err');

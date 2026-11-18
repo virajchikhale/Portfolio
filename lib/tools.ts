@@ -7,6 +7,7 @@
  *   - results are size-capped and treated as DATA by the caller (never as instructions);
  *   - no tool can read a secret, a file path or the system prompt.
  */
+import { ACTION_IDS, ACTIONS, MAX_ACTIONS } from "./actions.js";
 import type { Settings } from "./config.js";
 import { chunkLabel, type Chunk, type Skill } from "./content.js";
 import { looksLikeInjection, sanitize } from "./guardrails.js";
@@ -38,6 +39,7 @@ export interface ToolContext {
   chunks: Chunk[]; // the whole corpus (for list_projects / get_project)
   rag: Rag | null;
   book: SourceBook;
+  actions: string[]; // page actions offered during this run (ids only; see suggest_action)
 }
 
 export interface ToolOutput {
@@ -135,10 +137,25 @@ async function getProject(ctx: ToolContext, raw: unknown): Promise<ToolOutput> {
     data: { project: chunk.heading, sources: [{ n, label: chunkLabel(chunk) }] } };
 }
 
+/** OFFERS a page action. It changes nothing: the id goes to the page, which shows a button the visitor may click. */
+async function suggestAction(ctx: ToolContext, raw: unknown): Promise<ToolOutput> {
+  const args = checkArgs(raw, ["id"], ["id"]);
+  const id = strArg(args, "id", 1, 40);
+  if (!Object.hasOwn(ACTIONS, id)) throw new ToolError(`unknown action '${id}'. Allowed: ${ACTION_IDS.join(", ")}`);
+  if (!ctx.actions.includes(id)) {
+    if (ctx.actions.length >= MAX_ACTIONS) throw new ToolError(`offer at most ${MAX_ACTIONS} actions per answer`);
+    ctx.actions.push(id);
+  }
+  return { text: `OK. The visitor will see a button to ${ACTIONS[id]}. It has NOT happened and only happens if they click ` +
+    "it. Mention it in one short sentence and ask if they would like it; never say it was done.", data: { action: id } };
+}
+
 // ── registry ────────────────────────────────────────────────────────────────
 export interface Tool {
   spec: ToolSpec;
   run: (ctx: ToolContext, args: unknown) => Promise<ToolOutput>;
+  /** Only meaningful inside the chat page (it needs a UI to show a button): not exposed over MCP. */
+  agentOnly?: boolean;
 }
 
 export function buildTools(skills: Record<string, Skill>): Record<string, Tool> {
@@ -164,6 +181,15 @@ export function buildTools(skills: Record<string, Skill>): Record<string, Tool> 
       parameters: { type: "object", properties: { name: { type: "string",
         description: "Project name, e.g. 'Movie Recommendation'." } }, required: ["name"] } },
       run: getProject },
+    { spec: {
+      name: "suggest_action",
+      description: "Offer the visitor a BUTTON for a page action. It only shows a button: nothing happens unless they click " +
+        "it, so never say it was done. Use it sparingly and only when it clearly helps (for example they want a short " +
+        "version: readme; they want to see the projects: open-projects). Allowed ids: " +
+        ACTION_IDS.map((id) => `${id} (${ACTIONS[id]})`).join("; ") + ".",
+      parameters: { type: "object", properties: { id: { type: "string", enum: ACTION_IDS, description: "Action id." } },
+        required: ["id"] } },
+      run: suggestAction, agentOnly: true },
   ];
   return Object.fromEntries(tools.map((t) => [t.spec.name, t]));
 }

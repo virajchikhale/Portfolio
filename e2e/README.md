@@ -11,6 +11,7 @@ Real backend + real frontend + headless Firefox. Checks across the pages in `pag
 | `tour` | the first-visit mode chooser, the guided tour (spotlight, steps, keyboard, clean-up), the landing layout leaving the desktop visible, window dragging and fitting |
 | `hard` | self-hosted font and zero third-party requests, terminal escaping, and the OS booting with site data **blocked** |
 | `session` | the saved chat: survives a real page reload, 24 h sliding / 7 day expiry, NEW CHAT, strict validation of what is read back (tampering, XSS), size caps, storage-full behaviour, and the source list showing only what the answer cites |
+| `actions` | page actions: typed commands run locally with no server call, questions that merely mention a command still reach the model, offers and "yes" (one message only), the allowlist, hostile text, restore, and agent-mode offers through the real SSE stream (**TS backend only**) |
 
 ```bash
 pip install -r backend/requirements-dev.txt
