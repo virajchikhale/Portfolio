@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════
-   First-visit guide: a mode chooser (desktop or recruiter page) and a short desktop tour.
+   First-visit guide: a mode chooser (desktop or the one-page Read Me) and a short desktop tour.
 
-   Welcome  asks once how the visitor wants to look around. Choosing the desktop is remembered; the recruiter page is a
+   Welcome  asks once how the visitor wants to look around. Choosing the desktop is remembered; the Read Me page is a
             plain link away either way.
    Tour     five stops, each a spotlight on a real part of the desktop with a line from a pixel guide. It can be skipped
             at any point and replayed from HELP > Take the Tour or the terminal (`tour`).
@@ -74,7 +74,7 @@ const Guide = {
 /* ── Mode chooser ────────────────────────────────────────── */
 const Welcome = {
   open: false,
-  /* True until the visitor has picked the desktop once (or arrived with ?mode=os, e.g. from the recruiter page). */
+  /* True until the visitor has picked the desktop once (or arrived with ?mode=os, e.g. from the Read Me page). */
   needed(){
     if(new URLSearchParams(location.search).get('mode') === 'os'){ Guide.set('vc-os-mode', 'os'); return false; }
     return Guide.get('vc-os-mode') !== 'os';
@@ -94,7 +94,7 @@ const Welcome = {
     if(!this.wired){
       this.wired = true;
       os.addEventListener('click', ()=>this.choose('os'));
-      rv.addEventListener('click', ()=>this.choose('recruiter'));
+      rv.addEventListener('click', ()=>this.choose('readme'));
       el.addEventListener('keydown', e=>{
         if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); rv.focus(); }
         else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); os.focus(); }
@@ -107,7 +107,7 @@ const Welcome = {
     if(!this.open) return;
     this.open = false;
     Guide.stop();
-    if(mode === 'recruiter'){ location.href = 'recruiter.html'; return; }
+    if(mode === 'readme'){ location.href = 'readme.html'; return; }
     Guide.set('vc-os-mode', 'os');
     document.getElementById('welcome').classList.remove('show');
     if(typeof snd === 'function') snd('open');
@@ -133,8 +133,8 @@ const Tour = {
         text: 'The Flow Monitor shows how each answer is made, step by step: safety checks, search, then the model.' },
       { target: '#dock',
         text: 'The dock opens everything else: About, Skills, Projects and a Terminal. Type snake in it when you need a break.' },
-      { target: '.mb-recruiter',
-        text: 'Short on time? Recruiter View tells the same story on one page.',
+      { target: '.mb-readme',
+        text: 'Short on time? READ ME tells the same story on one page.',
         more: ' You can replay this tour from the HELP menu.' },
     ];
   },
