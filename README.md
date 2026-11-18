@@ -211,6 +211,14 @@ browser tab never delays a chat answer, and closing the monitor releases any hel
 * The UI uses no emoji: labels are plain words, status marks are drawn with CSS, icons are pixel art. A test scans every
   window, label and tooltip for pictographs.
 * Blocked site data (some browsers) cannot stop the OS from booting.
+* **Saved chat (this browser only).** The chat window keeps the conversation in `localStorage` so a refresh does not lose it:
+  no login, and nothing is stored on the server (the backend still keeps no questions or answers). It expires 24 h after the
+  last message (sliding) and never lives longer than 7 days; it holds at most 30 messages; **NEW CHAT** forgets it at once.
+  What is read back is treated as untrusted (validated, size-capped, shown with `textContent`), and the server screens
+  replayed history like live input. Failed or blocked turns are never saved, and with storage blocked the chat simply works
+  without saving. The model still receives only the last 6 turns.
+* **Sources shown under an answer are only the ones it cites** (`[1]`, `[2]`): retrieval runs for every question, so a
+  greeting would otherwise list sources it never used.
 
 ## Troubleshooting retrieval (RAG)
 Symptoms: the bot says "I don't have details about his experience", answers show no **Sources** line, or the Flow Monitor
