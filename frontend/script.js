@@ -426,7 +426,7 @@ function initOS(){
     document.getElementById('win-about').style.display = 'none';
     document.getElementById('dk-about').classList.remove('running');
   }
-  // First visit: ask whether to explore the desktop or read the recruiter page, then give a short tour (tour.js).
+  // First visit: ask whether to explore the desktop or read the one-page Read Me, then give a short tour (tour.js).
   // After that, land on VC·AI next to About. Not for automated browsers, so e2e starts clean; ?open=none keeps the
   // desktop as it was, ?welcome forces the chooser.
   try{

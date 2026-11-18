@@ -5,8 +5,13 @@
   "functions": {
     "api/**/*.ts": { "maxDuration": 60, "includeFiles": "content/**" }
   },
+  "redirects": [
+    { "source": "/recruiter.html", "destination": "/readme.html", "permanent": true },
+    { "source": "/recruiter", "destination": "/readme.html", "permanent": true }
+  ],
   "rewrites": [
-    { "source": "/mcp", "destination": "/api/mcp" }
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/readme", "destination": "/readme.html" }
   ],
   "headers": [
     {

@@ -1364,11 +1364,11 @@ body[data-theme="dark"] .flow-sync input:focus-visible,body[data-theme="dark"] .
 body[data-theme="dark"] #flow-runs{color:#e8e8e8;border-color:#aaa;background-color:#1e1e1e;
   background-image:linear-gradient(45deg,transparent 50%,#e8e8e8 50%),linear-gradient(135deg,#e8e8e8 50%,transparent 50%);}
 
-/* ── Recruiter-view entry points ── */
-.mb-recruiter{margin-left:auto;align-self:center;font-size:7px;padding:4px 8px;margin-right:6px;background:#000;color:#fff;
+/* ── Read Me entry points ── */
+.mb-readme{margin-left:auto;align-self:center;font-size:7px;padding:4px 8px;margin-right:6px;background:#000;color:#fff;
   text-decoration:none;border:2px solid #000;white-space:nowrap;}
-.mb-recruiter:hover{background:#fff;color:#000;}
-.mb-recruiter + .mb-right{margin-left:0;}
+.mb-readme:hover{background:#fff;color:#000;}
+.mb-readme + .mb-right{margin-left:0;}
 .chat-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 10px;border-top:2px solid #000;background:#fff;font-size:6px;line-height:1.6;color:#555;}
 .chat-link{font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.4;border:1px dashed #000;background:#fff;color:#000;padding:4px 6px;cursor:pointer;white-space:nowrap;}
 .chat-link:hover:not(:disabled){background:#000;color:#fff;}
@@ -1379,11 +1379,11 @@ body[data-theme="dark"] .chat-meta{ background:#111; border-color:#444; color:#9
 body[data-theme="dark"] .chat-link{ background:#1e1e1e; color:#e8e8e8; border-color:#666; }
 body[data-theme="dark"] .chat-link:hover:not(:disabled){ background:#e8e8e8; color:#111; }
 body[data-theme="dark"] .chat-link:focus-visible{ outline-color:#e8e8e8; }
-.chat-recruiter{display:block;padding:6px 10px;border-top:2px solid #000;background:#f0f0f0;color:#000;font-size:7px;line-height:1.6;text-decoration:underline;}
-.chat-recruiter:hover{background:#000;color:#fff;}
-body[data-theme="dark"] .mb-recruiter{background:#e8e8e8;color:#111;border-color:#e8e8e8;}
-body[data-theme="dark"] .chat-recruiter{background:#1a1a1a;color:#ddd;border-color:#444;}
-@media (max-width: 768px){ .mb-recruiter{font-size:6px;padding:4px 6px;} }
+.chat-readme{display:block;padding:6px 10px;border-top:2px solid #000;background:#f0f0f0;color:#000;font-size:7px;line-height:1.6;text-decoration:underline;}
+.chat-readme:hover{background:#000;color:#fff;}
+body[data-theme="dark"] .mb-readme{background:#e8e8e8;color:#111;border-color:#e8e8e8;}
+body[data-theme="dark"] .chat-readme{background:#1a1a1a;color:#ddd;border-color:#444;}
+@media (max-width: 768px){ .mb-readme{font-size:6px;padding:4px 6px;} }
 
 /* ── Striped headers: the label sits on a solid patch as tall as the bar ── */
 .pc-head span,.ie-fav-title span,#game-header span{display:inline-block;padding-top:2px;padding-bottom:2px;}
