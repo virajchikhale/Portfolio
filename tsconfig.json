@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "strict": true,
     "noUncheckedIndexedAccess": false,
     "skipLibCheck": true,
@@ -12,5 +12,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["api/**/*.ts", "lib/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"]
+  "include": ["api/**/*.ts", "lib/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "e2e/**/*.ts"]
 }

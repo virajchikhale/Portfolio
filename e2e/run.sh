@@ -4,16 +4,24 @@
 #   e2e/run.sh ui hard         # some pages
 # Env: E2E_EMBEDDINGS=local|fake (default local; needs the model: set EMBEDDING_CACHE_DIR), E2E_PORT (default 8767),
 #      PYTHON (default python3), FIREFOX (default firefox).
+#      E2E_BACKEND=ts runs the TypeScript backend (api/, lib/) instead of the Python one, through Docker (node:22-slim,
+#      host networking): no Node install needed.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PY="${PYTHON:-python3}"; FF="${FIREFOX:-firefox}"; PORT="${E2E_PORT:-8767}"
 OUT="$HERE/.out"; mkdir -p "$OUT"
-PAGES=("$@"); [ ${#PAGES[@]} -eq 0 ] && PAGES=(pipeline dock agent ui hard tour)
+PAGES=("$@"); [ ${#PAGES[@]} -eq 0 ] && PAGES=(pipeline dock agent ui hard tour session)
 # page:seconds the page is kept alive (slow-mode checks run in real time); hard also runs once with storage blocked
-declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60 [tour]=60)
+declare -A KEEP=([pipeline]=280 [dock]=60 [agent]=400 [ui]=280 [hard]=60 [tour]=60 [session]=60)
 
-"$PY" "$HERE/server.py" </dev/null >"$OUT/server.log" 2>&1 & SERVER=$!
-trap 'kill $SERVER 2>/dev/null; pkill -x firefox 2>/dev/null; pkill -x firefox-bin 2>/dev/null; rm -rf "${TMPDIR:-/tmp}"/e2e-ffprof.*' EXIT
+if [ "${E2E_BACKEND:-py}" = ts ]; then
+  docker rm -f e2e-ts-server >/dev/null 2>&1
+  docker run --rm --name e2e-ts-server --network host --user "$(id -u):$(id -g)" -e E2E_PORT="$PORT" -e HOME=/tmp \
+    -v "$HERE/..":/app -w /app node:22-slim npx tsx e2e/server.ts </dev/null >"$OUT/server.log" 2>&1 & SERVER=$!
+else
+  "$PY" "$HERE/server.py" </dev/null >"$OUT/server.log" 2>&1 & SERVER=$!
+fi
+trap 'kill $SERVER 2>/dev/null; docker rm -f e2e-ts-server >/dev/null 2>&1; pkill -x firefox 2>/dev/null; pkill -x firefox-bin 2>/dev/null; rm -rf "${TMPDIR:-/tmp}"/e2e-ffprof.*' EXIT
 for _ in $(seq 1 60); do curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null && break; sleep 1; done
 curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null || { echo "server did not start:"; tail -20 "$OUT/server.log"; exit 2; }
 
@@ -49,6 +57,7 @@ PYEOF
 for p in "${PAGES[@]}"; do
   run_page "$p" "$p" "${KEEP[$p]:-120}"
   [ "$p" = hard ] && run_page "hard (storage blocked)" "hard&nostorage=1" 60
+  [ "$p" = session ] && run_page "session (storage blocked)" "session&nostorage=1" 60
 done
 echo; [ $fail -eq 0 ] && echo "e2e: all green" || echo "e2e: FAILURES"
 exit $fail

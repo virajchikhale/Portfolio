@@ -21,6 +21,94 @@ const AI = {
 
 function aiUrl(path){ return ((typeof CONFIG!=='undefined' && CONFIG.apiBase) || '') + path; }
 
+/* ── Saved chat session (this browser only) ─────────────────────────────────────────────────────────────────────
+   The conversation is kept in localStorage so a refresh does not lose it. There is no login and nothing is stored on
+   the server: the backend still keeps no questions or answers. The session expires 24 h after the LAST message
+   (sliding), and never lives longer than 7 days. Everything read back is validated (it is user-editable storage) and
+   only ever inserted with textContent. Storage can be unavailable or full (private windows, blocked site data): every
+   access is guarded and the chat simply works without saving. */
+const AISession = {
+  KEY: 'vc-ai-chat-v1',
+  TTL_MS: 24 * 3600e3,         // sliding: counted from the last message
+  MAX_AGE_MS: 7 * 24 * 3600e3, // hard cap: counted from the first message
+  MAX_MESSAGES: 30,            // 15 question/answer pairs
+  MAX_CHARS: 60000,            // whole saved document
+  data: null,                  // {v, created, updated, messages:[{role, content, sources?}]}
+
+  store(){ try{ return window.localStorage || null; }catch(e){ return null; } },
+  available(){
+    const st = this.store(); if(!st) return false;
+    try{ st.setItem('vc-ai-probe', '1'); st.removeItem('vc-ai-probe'); return true; }catch(e){ return false; }
+  },
+  expired(d, now){ return now - d.updated > this.TTL_MS || now - d.created > this.MAX_AGE_MS; },
+  isStale(){ return !!(this.data && this.expired(this.data, Date.now())); },
+
+  sanitize(list){
+    if(!Array.isArray(list)) return [];
+    const out = [];
+    for(const m of list){
+      if(!m || (m.role !== 'user' && m.role !== 'assistant')) continue;
+      if(typeof m.content !== 'string' || !m.content.trim() || m.content.length > 8000) continue;
+      const e = {role: m.role, content: m.content};
+      if(Array.isArray(m.sources)){
+        e.sources = m.sources.filter(s=>s && Number.isInteger(s.n) && s.n > 0 && s.n < 100 && typeof s.label === 'string')
+          .slice(0, 8).map(s=>({n: s.n, label: s.label.slice(0, 200)}));
+      }
+      out.push(e);
+    }
+    const kept = out.slice(-this.MAX_MESSAGES);
+    while(kept.length && kept[0].role !== 'user') kept.shift();   // never start mid-exchange
+    return kept;
+  },
+
+  /** The saved messages, or [] (and the key is removed) when there is nothing valid and fresh. */
+  load(){
+    const st = this.store(); if(!st) return [];
+    try{
+      const raw = st.getItem(this.KEY); if(!raw) return [];
+      const d = JSON.parse(raw);
+      const msgs = this.sanitize(d && d.v === 1 ? d.messages : null);
+      if(!msgs.length || !isFinite(d.created) || !isFinite(d.updated) || this.expired(d, Date.now())){
+        st.removeItem(this.KEY); return [];
+      }
+      this.data = {v: 1, created: d.created, updated: d.updated, messages: msgs};
+      return msgs;
+    }catch(e){
+      try{ st.removeItem(this.KEY); }catch(_){}
+      return [];
+    }
+  },
+
+  /** Record one finished exchange (a failed or blocked turn is never recorded). */
+  append(question, answer, sources){
+    const now = Date.now();
+    if(!this.data || this.expired(this.data, now)) this.data = {v: 1, created: now, updated: now, messages: []};
+    const msgs = this.data.messages;
+    msgs.push({role: 'user', content: question}, {role: 'assistant', content: answer, sources: sources || []});
+    while(msgs.length > this.MAX_MESSAGES) msgs.splice(0, 2);
+    this.data.updated = now;
+    const st = this.store(); if(!st) return;
+    let json = JSON.stringify(this.data);
+    while(json.length > this.MAX_CHARS && msgs.length > 2){ msgs.splice(0, 2); json = JSON.stringify(this.data); }
+    try{ st.setItem(this.KEY, json); }catch(e){ /* full or blocked: keep chatting without saving */ }
+  },
+
+  clear(){
+    this.data = null;
+    try{ const st = this.store(); if(st) st.removeItem(this.KEY); }catch(e){}
+  },
+};
+
+/* Retrieval runs for every question, so the server's source list can include sources the answer never used (a greeting
+   still retrieves something). Show only the ones the answer actually cites: [1], [2] or [1, 2]. */
+function aiCitedSources(answer, sources){
+  const cited = new Set();
+  String(answer).replace(/\[(\d{1,2}(?:\s*,\s*\d{1,2})*)\]/g, (_, list)=>{
+    list.split(',').forEach(n=>cited.add(parseInt(n, 10))); return '';
+  });
+  return (sources || []).filter(s=>cited.has(s.n));
+}
+
 /* Turn any failure into a short message that is safe to show the visitor. */
 function aiErrorMessage(status, body){
   if(status === 404 || status === 405 || status === 0)
@@ -163,7 +251,58 @@ function chatAppendSources(row, sources){
 function chatOpen(){
   openWin('win-chat');
   if(AI.online === null) aiPing();
+  const log = document.getElementById('chat-log'); if(log) log.scrollTop = log.scrollHeight;   // restored history: start at the latest
   setTimeout(()=>{ const i = document.getElementById('chat-in'); if(i) i.focus(); }, 80);
+}
+
+/* The note under the log, and the NEW CHAT button (only useful once there is a conversation). */
+function chatRenderMeta(){
+  const note = document.getElementById('chat-saved'), btn = document.getElementById('chat-clear');
+  const started = document.querySelectorAll('#chat-log .chat-msg').length > 1;
+  if(btn) btn.hidden = !started;
+  if(note) note.textContent = AISession.available() ? 'Chat is saved on this device for 24 h' : 'Chat is not saved in this browser';
+}
+
+function chatRenderSuggestions(){
+  const sugg = document.getElementById('chat-suggest');
+  if(!sugg) return;
+  sugg.textContent = '';
+  ((typeof CONFIG!=='undefined' && CONFIG.chatSuggestions) || []).forEach(q=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chat-chip'; b.textContent = q;
+    b.addEventListener('click', ()=>chatSend(q));
+    sugg.appendChild(b);
+  });
+}
+
+/* Start over: forget the saved session, the model's context and everything on screen except the greeting. */
+function chatReset(){
+  if(AI.busy) return;
+  AISession.clear();
+  AI.history = [];
+  document.querySelectorAll('#chat-log .chat-msg').forEach((el, i)=>{ if(i > 0) el.remove(); });
+  let sugg = document.getElementById('chat-suggest');
+  if(!sugg){
+    sugg = document.createElement('div'); sugg.id = 'chat-suggest';
+    document.getElementById('chat-log').appendChild(sugg);
+  }
+  chatRenderSuggestions();
+  chatRenderMeta();
+  const i = document.getElementById('chat-in'); if(i) i.focus();
+}
+
+/* On page load: put a saved conversation back on screen and back into the model's context. */
+function chatRestore(){
+  const msgs = AISession.load();
+  if(msgs.length){
+    const sugg = document.getElementById('chat-suggest'); if(sugg) sugg.remove();
+    msgs.forEach(m=>{
+      const body = chatAppend(m.role === 'user' ? 'user' : 'ai', m.content);
+      if(m.role === 'assistant' && m.sources && m.sources.length) chatAppendSources(body.parentElement, m.sources);
+    });
+    AI.history = msgs.map(m=>({role: m.role, content: m.content})).slice(-AI.MAX_HISTORY);
+  }
+  chatRenderMeta();
 }
 
 async function chatSend(preset){
@@ -171,6 +310,7 @@ async function chatSend(preset){
   const sendBtn = document.getElementById('chat-send');
   const text = (preset || input.value).trim();
   if(!text || AI.busy) return;
+  if(AISession.isStale()) chatReset();     // the tab sat open past the session's lifetime: start fresh
   input.value = '';
   const sugg = document.getElementById('chat-suggest');
   if(sugg) sugg.remove();
@@ -178,21 +318,25 @@ async function chatSend(preset){
   chatAppend('user', text);
   const out = chatAppend('ai', '…');
   let started = false, sources = [];
-  sendBtn.disabled = true; input.disabled = true;
+  const clearBtn = document.getElementById('chat-clear');
+  sendBtn.disabled = true; input.disabled = true; if(clearBtn) clearBtn.disabled = true;
   try{
-    await aiAsk(text, chunk=>{
+    const answer = await aiAsk(text, chunk=>{
       if(!started){ out.textContent = ''; started = true; }
       out.textContent += chunk;
       const log = document.getElementById('chat-log');
       log.scrollTop = log.scrollHeight;
     }, s=>{ sources = s; });
-    if(sources.length) chatAppendSources(out.parentElement, sources);
+    const cited = aiCitedSources(answer, sources);
+    if(cited.length) chatAppendSources(out.parentElement, cited);
+    AISession.append(text, answer, cited);
   }catch(e){
     out.textContent = e.message;
     out.classList.add('chat-err');
     if(e.message.indexOf('offline') >= 0){ AI.online = false; aiRenderStatus(); }
   }finally{
-    sendBtn.disabled = false; input.disabled = false;
+    sendBtn.disabled = false; input.disabled = false; if(clearBtn) clearBtn.disabled = false;
+    chatRenderMeta();
     input.focus();
   }
 }
@@ -204,16 +348,8 @@ function chatInit(){
   const ag = document.getElementById('chat-agent');
   if(ag) ag.addEventListener('change', e=>AI.setMode(e.target.checked ? 'agent' : 'pipeline'));
   aiRenderMode();
-  const sugg = document.getElementById('chat-suggest');
-  if(sugg){
-    sugg.textContent = '';
-    ((typeof CONFIG!=='undefined' && CONFIG.chatSuggestions) || []).forEach(q=>{
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'chat-chip'; b.textContent = q;
-      b.addEventListener('click', ()=>chatSend(q));
-      sugg.appendChild(b);
-    });
-  }
+  chatRenderSuggestions();
+  chatRestore();
   aiRenderStatus();
 }
 
@@ -235,11 +371,12 @@ async function askInTerminal(question, promptLabel){
 
   let started = false, sources = [];
   try{
-    await aiAsk(question, chunk=>{
+    const answer = await aiAsk(question, chunk=>{
       if(!started){ ans.textContent = ''; started = true; }
       ans.textContent += chunk;
       out.scrollTop = out.scrollHeight;
     }, s=>{ sources = s; });
+    sources = aiCitedSources(answer, sources);
     if(sources.length){
       const src = document.createElement('span');
       src.className = 't-out';
