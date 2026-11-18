@@ -5,6 +5,11 @@ questions about me, grounded in a profile and a set of **skills**.
 
 > `main` = static GitHub Pages site. `ai-fullstack` = this full-stack version.
 
+> **Branch `vercel-typescript`: deploy on Vercel.** The backend has been ported from Python/FastAPI to TypeScript
+> Vercel Functions (`api/`, `lib/`), serving the same `/api/chat` (SSE), `/api/health`, `/api/stats` and `/mcp` contract,
+> so the frontend is unchanged. No database, no Docker, no server to run: see [docs/DEPLOY-VERCEL.md](docs/DEPLOY-VERCEL.md).
+> The sections below still describe the Python backend (`backend/`) that this branch replaces.
+
 ## Run
 ```bash
 cp .env.example .env            # add GEMINI_API_KEY (or LLM_PROVIDER=openai + LLM_BASE_URL/LLM_API_KEY for Groq/Ollama; LLM_PROVIDER=fake runs keyless)
