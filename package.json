@@ -16,7 +16,7 @@
     "smoke": "tsx --env-file=.env scripts/smoke.ts"
   },
   "dependencies": {
-    "@vercel/functions": "^2.0.0"
+    "@vercel/functions": "^3.11.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
