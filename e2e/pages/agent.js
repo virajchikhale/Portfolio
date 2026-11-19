@@ -44,7 +44,9 @@
     Flow.setMode('2'); Flow.setSync(true); AI.history = []; text = '';
     let t0 = performance.now(), first = null;
     await aiAsk(Q, c => { if (first === null) first = performance.now(); text += c; });
-    ok('2x + sync: answer held until the FINAL step is reached (>= 3.5 s)', first - t0 >= 3500, Math.round(first - t0) + ' ms');
+    // Un-gated, the fake model answers in well under a second; held, it arrives with the last step at about 3.4 s at 2x. The
+    // step timing varies a little with runner speed (3.3 s was seen on a busy CI machine), so the bar is 3 s, not 3.5 s.
+    ok('2x + sync: answer held until the FINAL step is reached (>= 3 s)', first - t0 >= 3000, Math.round(first - t0) + ' ms');
     ok('2x + sync: but not absurdly long', first - t0 < 15000);
     ok('2x + sync: complete answer delivered', text.startsWith('[fake-agent]') && text.length > 20);
     while (Flow.playing && performance.now() - t0 < 25000) await sleep(100);

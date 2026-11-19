@@ -89,6 +89,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # compose refuses to render without POSTGRES_PASSWORD and an env_file: .env is git-ignored, so use the example's placeholders
+      - run: cp .env.example .env
       - run: docker compose config -q
       - run: docker build -t ci-backend ./backend
       - run: docker build -t ci-frontend ./frontend
