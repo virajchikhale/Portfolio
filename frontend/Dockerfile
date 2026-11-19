@@ -1,4 +1,4 @@
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY ratelimit.conf /etc/nginx/conf.d/00-ratelimit.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY fonts /usr/share/nginx/html/fonts
