@@ -1,0 +1,1487 @@
+/* Press Start 2P (SIL OFL 1.1, see fonts/OFL.txt), served from this origin: no request to Google Fonts, so a visitor's
+   address is never sent to a third party just to draw the UI. */
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/PressStart2P-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/PressStart2P-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;}
+/* ─── RESET ───────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --menubar-h:22px;
+  --dock-h:70px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;}
+body{
+  font-family:'Press Start 2P',monospace;
+  font-size:12px;
+  image-rendering:pixelated;
+  cursor:default;
+  -webkit-font-smoothing:none;
+}
+
+/* ══════════════════════════════════════════════
+   BOOT SCREEN
+══════════════════════════════════════════════ */
+#boot{
+  position:fixed;inset:0;
+  background:#000;
+  display:flex;
+  align-items:center;justify-content:center;
+  z-index:9999;
+}
+#boot-screen{
+  width:340px;
+  background:#fff;
+  border:3px solid #000;
+  box-shadow:6px 6px 0 #fff,7px 7px 0 #000;
+  overflow:hidden;
+}
+.boot-titlebar{
+  background:#000;color:#fff;
+  font-size:8px;padding:7px 10px;
+  text-align:center;letter-spacing:0.06em;
+}
+.boot-body{
+  padding:24px 28px 20px;
+  display:flex;flex-direction:column;
+  align-items:center;gap:16px;
+}
+.boot-mac-wrap{
+  width:64px;height:64px;
+  image-rendering:pixelated;
+  flex-shrink:0;
+}
+.boot-mac-wrap canvas{width:64px;height:64px;display:block;}
+.boot-lines{
+  width:100%;
+  font-size:7px;line-height:2;color:#000;
+  min-height:88px;overflow:hidden;
+}
+.boot-line{
+  display:block;
+  opacity:0;
+  white-space:nowrap;
+}
+.boot-line.show{opacity:1;}
+.boot-progress-wrap{
+  width:100%;border:2px solid #000;height:14px;background:#fff;
+}
+.boot-progress-bar{
+  height:100%;
+  background:repeating-linear-gradient(90deg,#000 0,#000 8px,#fff 8px,#fff 10px);
+  width:0%;
+  transition:width 0.2s linear;
+}
+.boot-ver{font-size:6px;color:#666;text-align:center;}
+.boot-skip{font-size:6px;text-align:center;margin-top:8px;color:#666;}
+.boot-skip a{color:inherit;text-decoration:underline;cursor:pointer;}
+.boot-skip a:hover{color:#000;}
+.xp-item{margin-bottom:12px;}
+.xp-item h3{font-size:8px;line-height:1.6;margin-bottom:3px;}
+.xp-meta{font-size:6px;color:#777;margin-bottom:5px;}
+.xp-item ul{margin:0 0 0 12px;padding:0;font-size:7px;line-height:2;}
+
+/* ══════════════════════════════════════════════
+   OS SHELL
+══════════════════════════════════════════════ */
+#os{
+  position:fixed;inset:0;
+  display:none;
+  flex-direction:column;
+}
+#os.visible{display:flex;}
+
+/* ── MENU BAR ──────────────────────────────── */
+#menubar{
+  height:var(--menubar-h);
+  background:#fff;
+  border-bottom:2px solid #000;
+  display:flex;align-items:stretch;
+  flex-shrink:0;
+  z-index:1000;
+  user-select:none;
+  position:relative;
+}
+.mb-item{
+  display:flex;align-items:center;
+  padding:0 10px;
+  font-size:8px;
+  cursor:pointer;
+  white-space:nowrap;
+  position:relative;
+}
+.mb-item:hover,.mb-item.open{background:#000;color:#fff;}
+#mb-apple{
+  font-size:8px;line-height:1;
+  border-right:1px solid #ccc;
+  padding:0 10px;
+}
+/* The OS mark is drawn with CSS: the Apple glyph (U+F8FF) is only a letter on macOS and a hex box everywhere else. */
+.mb-logo{display:inline-block;border:2px solid currentColor;padding:2px 3px 1px;font-size:7px;line-height:1;}
+.mb-sep-v{width:1px;background:#ccc;margin:3px 0;}
+.mb-right{margin-left:auto;padding:0 10px;font-size:7px;display:flex;align-items:center;pointer-events:none;}
+
+/* dropdowns */
+.mb-dropdown{
+  display:none;
+  position:absolute;
+  top:100%;left:0;
+  background:#fff;
+  border:1px solid #000;
+  border-top:none;
+  box-shadow:3px 3px 0 #000;
+  min-width:170px;
+  z-index:1100;
+}
+.mb-item.open .mb-dropdown{display:block;}
+.dd-row{
+  padding:5px 12px 5px 16px;
+  font-size:7px;cursor:pointer;
+  white-space:nowrap;
+  border-bottom:1px solid #eee;
+  color:#000;
+  display:flex;align-items:center;gap:8px;
+}
+.dd-row:last-child{border-bottom:none;}
+.dd-row:hover{background:#000;color:#fff;}
+.dd-hr{height:1px;background:#000;margin:3px 0;}
+
+/* ── DESKTOP ───────────────────────────────── */
+#desktop{
+  flex:1;
+  background:#fff;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(0,0,0,0.04) 19px,rgba(0,0,0,0.04) 20px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(0,0,0,0.04) 19px,rgba(0,0,0,0.04) 20px);
+  position:relative;
+  overflow:hidden;
+}
+
+/* ── DESKTOP ICONS ─────────────────────────── */
+.desk-icons{
+  position:absolute;
+  top:10px;right:10px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.dsk-icon{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:5px 4px 4px;
+  border:1px solid transparent;
+  cursor:pointer;width:68px;
+}
+.dsk-icon:hover,.dsk-icon.sel{border:1px dashed #000;background:rgba(0,0,0,0.05);}
+.dsk-icon canvas{image-rendering:pixelated;display:block;}
+.dsk-icon span{font-size:6px;text-align:center;line-height:1.5;color:#000;word-break:break-word;display:block;}
+
+/* ── DOCK ──────────────────────────────────── */
+#dock{
+  height:var(--dock-h);
+  background:#fff;
+  border-top:2px solid #000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:0 16px;
+  flex-shrink:0;
+  z-index:800;
+  position:relative;
+}
+#dock::after{
+  content:'';
+  position:absolute;top:0;left:0;right:0;
+  height:2px;
+  background:repeating-linear-gradient(90deg,#000 0,#000 4px,#fff 4px,#fff 8px);
+  pointer-events:none;
+}
+.dk-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:5px 8px 8px;
+  cursor:pointer;
+  position:relative;
+  border:1px solid transparent;
+  transition:transform 0.1s ease, background 0.1s;
+  min-width:54px;
+}
+.dk-item:hover{background:rgba(0,0,0,0.06);border:1px solid #000;transform:translateY(-3px);}
+.dk-item.running::after{
+  content:'';position:absolute;bottom:3px;
+  width:4px;height:4px;background:#000;border-radius:50%;
+}
+.dk-item canvas{image-rendering:pixelated;display:block;}
+.dk-label{font-size:6px;color:#000;white-space:nowrap;}
+.dk-sep{width:2px;height:40px;background:repeating-linear-gradient(180deg,#000 0,#000 3px,#fff 3px,#fff 6px);margin:0 4px;flex-shrink:0;}
+
+/* ══════════════════════════════════════════════
+   WINDOWS
+══════════════════════════════════════════════ */
+.mac-win{
+  position:absolute;
+  background:#fff;
+  border:2px solid #000;
+  box-shadow:4px 4px 0 #000;
+  display:flex;flex-direction:column;
+  min-width:260px;min-height:160px;
+  overflow:hidden;
+  /* no animation by default — added via JS on open */
+}
+.mac-win.win-open-anim{animation:winPop 0.1s ease-out both;}
+@keyframes winPop{from{transform:scale(0.88);opacity:0.4;}to{transform:scale(1);opacity:1;}}
+
+/* ══════════════════════════════════════════════
+   RETRO ANIMATIONS & EFFECTS
+══════════════════════════════════════════════ */
+
+/* Blinking cursor */
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.blink{animation:blink 1s step-end infinite;}
+.blink-fast{animation:blink 0.5s step-end infinite;}
+
+/* Marching ants border */
+@keyframes march{to{stroke-dashoffset:-20;}}
+@keyframes marchBorder{
+  0%{border-image:repeating-linear-gradient(90deg,#000 0,#000 4px,transparent 4px,transparent 8px) 1;}
+  100%{border-image:repeating-linear-gradient(90deg,#000 8px,#000 12px,transparent 12px,transparent 16px) 1;}
+}
+
+/* Scanlines overlay on desktop */
+#desktop::after{
+  content:'';
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0.03) 0px,
+    rgba(0,0,0,0.03) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  pointer-events:none;
+  z-index:1;
+}
+
+/* CRT flicker on boot */
+@keyframes crtFlicker{
+  0%,100%{opacity:1;}
+  92%{opacity:1;}
+  93%{opacity:0.85;}
+  94%{opacity:1;}
+  96%{opacity:0.9;}
+  97%{opacity:1;}
+}
+#boot{animation:crtFlicker 4s infinite;}
+
+/* Typewriter underline */
+@keyframes typeSlide{from{width:0;}to{width:100%;}}
+.type-anim{
+  overflow:hidden;
+  white-space:nowrap;
+  animation:typeSlide 1.2s steps(20,end) forwards;
+}
+
+/* Pixel march on dock running dot */
+@keyframes dotPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.8);}}
+.dk-item.running::after{animation:dotPulse 1.2s ease-in-out infinite;}
+
+/* Spinning pixel gear on boot */
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Desktop icon bounce on hover */
+.dsk-icon:hover canvas{animation:iconBounce 0.3s ease both;}
+@keyframes iconBounce{0%{transform:translateY(0);}40%{transform:translateY(-4px);}100%{transform:translateY(0);}}
+
+/* Status bar marquee scroll */
+@keyframes marquee{from{transform:translateX(100%);}to{transform:translateX(-100%);}}
+.marquee-txt{
+  display:inline-block;
+  white-space:nowrap;
+  animation:marquee 14s linear infinite;
+}
+
+/* Pixel rain on desktop bg */
+.desk-rain-dot{
+  position:absolute;
+  width:2px;height:6px;
+  background:#000;
+  opacity:0.06;
+  border-radius:0;
+  animation:rainFall linear infinite;
+}
+@keyframes rainFall{
+  from{transform:translateY(-10px);opacity:0.08;}
+  to{transform:translateY(100vh);opacity:0;}
+}
+
+/* Boot line typewriter reveal */
+.boot-line.show{
+  opacity:1;
+  animation:typeReveal 0.25s steps(30,end) forwards;
+}
+@keyframes typeReveal{from{clip-path:inset(0 100% 0 0);}to{clip-path:inset(0 0% 0 0);}}
+
+/* Invert flash on button click */
+.mac-btn:active,.ie-action-btn:active,.badge:active,.chip:active{
+  animation:invertFlash 0.1s steps(1) forwards;
+}
+@keyframes invertFlash{0%{filter:invert(1);}100%{filter:invert(0);}}
+
+/* about window stat counter */
+@keyframes countUp{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.stat-box{animation:countUp 0.4s ease-out both;}
+.stat-box:nth-child(1){animation-delay:0.1s;}
+.stat-box:nth-child(2){animation-delay:0.2s;}
+.stat-box:nth-child(3){animation-delay:0.3s;}
+
+/* Chip hover pop */
+.chip:hover{background:#000;color:#fff;transform:scale(1.05);transition:transform 0.1s;}
+
+/* Badge hover slide */
+.badge{transition:letter-spacing 0.15s;}
+.badge:hover{letter-spacing:0.04em;}
+
+/* Dock hover lift with shadow */
+.dk-item:hover{
+  background:rgba(0,0,0,0.06);
+  border:1px solid #000;
+  transform:translateY(-5px);
+  box-shadow:0 4px 0 #000;
+  transition:transform 0.12s,box-shadow 0.12s;
+}
+
+/* Scrollbar thumb march */
+.mac-body::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#000 0,#000 3px,#fff 3px,#fff 6px);
+  animation:thumbScroll 1s linear infinite;
+}
+@keyframes thumbScroll{from{background-position:0 0;}to{background-position:6px 6px;}}
+
+/* Status bar blink separator */
+@keyframes sepBlink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.ie-statusbar{animation:none;}
+
+/* Window resize handle pulse */
+.mac-rsz:hover{opacity:0.6;cursor:se-resize;}
+
+/* titlebar */
+.mac-tb{
+  height:22px;
+  background:#fff;
+  border-bottom:2px solid #000;
+  display:flex;align-items:center;
+  padding:3px 4px;gap:4px;
+  cursor:grab;
+  flex-shrink:0;
+  user-select:none;
+}
+.mac-tb:active{cursor:grabbing;}
+/* Classic pinstripes, kept inside the bar's padding; the title and buttons sit on solid patches so no line crosses them. */
+.mac-win.active .mac-tb{
+  background-image:repeating-linear-gradient(0deg,#000 0,#000 1px,#fff 1px,#fff 3px);
+  background-origin:content-box;background-clip:content-box;
+}
+.mac-win.active .mac-tb .tb-title{background:#fff;}
+.mac-win.active .mac-tb .tb-btn{box-shadow:0 0 0 2px #fff;}
+.tb-btn{
+  width:13px;height:13px;
+  border:1.5px solid #000;
+  background:#fff;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  font-size:10px;
+  line-height:1;
+  font-family:monospace;
+}
+.tb-btn:hover{background:#000;color:#fff;}
+.tb-title{
+  flex:0 1 auto;min-width:0;margin:0 auto;padding:0 8px;
+  text-align:center;
+  font-size:8px;line-height:14px;
+  pointer-events:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* scrollable body */
+.mac-body{
+  flex:1;
+  overflow:auto;
+  min-height:0; /* critical for flex children */
+}
+.mac-body::-webkit-scrollbar{width:14px;}
+.mac-body::-webkit-scrollbar-track{background:#fff;border-left:1px solid #000;}
+.mac-body::-webkit-scrollbar-thumb{background:repeating-linear-gradient(45deg,#000 0,#000 2px,#fff 2px,#fff 4px);border:1px solid #000;}
+
+/* resize handle */
+.mac-rsz{
+  position:absolute;bottom:0;right:0;
+  width:14px;height:14px;cursor:se-resize;flex-shrink:0;
+  background:
+    linear-gradient(135deg,transparent 40%,#000 40%,#000 55%,transparent 55%) no-repeat 2px 2px / 10px 10px,
+    linear-gradient(135deg,transparent 40%,#000 40%,#000 55%,transparent 55%) no-repeat 6px 6px / 8px 8px;
+}
+
+/* content padding helper */
+.wc{padding:14px 16px;}
+
+/* ── ABOUT WINDOW ──────────────────────────── */
+.aw-head{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px;}
+.aw-avatar{border:2px solid #000;image-rendering:pixelated;flex-shrink:0;}
+.aw-info h1{font-size:9px;margin-bottom:6px;}
+.aw-info p{font-size:7px;line-height:2;color:#444;margin-bottom:4px;}
+.divider{width:100%;height:2px;background:repeating-linear-gradient(90deg,#000 0,#000 4px,#fff 4px,#fff 6px);margin:10px 0;}
+.stats{display:flex;gap:8px;margin:8px 0;}
+.stat-box{flex:1;border:2px solid #000;padding:8px 4px;text-align:center;}
+.stat-box .sv{font-size:13px;}
+.stat-box .sl{font-size:6px;color:#666;margin-top:3px;}
+.badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.badge{
+  border:1px solid #000;padding:3px 7px;
+  font-size:6px;cursor:pointer;
+  background:#fff;text-decoration:none;color:#000;
+  display:inline-block;
+}
+.badge:hover{background:#000;color:#fff;}
+
+/* ── SKILLS WINDOW ─────────────────────────── */
+.sk-cat{margin-bottom:11px;}
+.sk-cat-h{font-size:7px;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:7px;letter-spacing:0.05em;}
+.sk-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{border:1px solid #000;padding:3px 7px;font-size:6px;cursor:pointer;}
+.chip:hover{background:#000;color:#fff;}
+
+/* ── PROJECTS WINDOW ───────────────────────── */
+.pc{border:2px solid #000;margin-bottom:12px;background:#fff;}
+.pc-head{
+  background:repeating-linear-gradient(90deg,#000 0,#000 1px,#fff 1px,#fff 3px);
+  padding:5px 10px;font-size:7px;
+}
+.pc-head span{background:#fff;padding:0 6px;}
+.pc-body{padding:10px 12px;}
+.pc-body p{font-size:6.5px;line-height:2;color:#333;margin-bottom:8px;}
+.pc-tags{display:flex;flex-wrap:wrap;gap:4px;}
+.pc-tag{border:1px solid #000;padding:2px 6px;font-size:5.5px;}
+.pc-links{display:flex;gap:8px;margin-top:8px;}
+.pc-link{border:1px solid #000;padding:4px 9px;font-size:6px;cursor:pointer;text-decoration:none;color:#000;display:inline-block;}
+.pc-link:hover{background:#000;color:#fff;}
+
+/* ── TERMINAL WINDOW ───────────────────────── */
+/* terminal window body is flex column, filling the mac-win */
+#win-terminal .mac-body{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.term-inner{
+  display:flex;flex-direction:column;
+  flex:1;min-height:0;
+  background:#fff;
+  padding:0;
+}
+#term-out{
+  flex:1;overflow-y:auto;
+  padding:12px 14px 6px;
+  font-size:8px;line-height:2;
+  min-height:0;
+}
+#term-out::-webkit-scrollbar{width:10px;}
+#term-out::-webkit-scrollbar-track{background:#fff;border-left:1px solid #000;}
+#term-out::-webkit-scrollbar-thumb{background:repeating-linear-gradient(45deg,#000 0,#000 2px,#fff 2px,#fff 4px);border:1px solid #000;}
+.term-block{margin-bottom:2px;}
+.term-block .t-cmd{color:#000;}
+.term-block .t-out{color:#444;padding-left:14px;display:block;}
+.term-block .t-err{color:#000;font-style:italic;padding-left:14px;display:block;}
+.term-input-row{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 14px;
+  border-top:2px solid #000;
+  flex-shrink:0;
+  background:#fff;
+}
+.term-input-row .t-prompt{font-size:8px;white-space:nowrap;flex-shrink:0;}
+#term-in{
+  flex:1;
+  background:none;border:none;outline:none;
+  font-family:'Press Start 2P',monospace;font-size:8px;
+  color:#000;caret-color:#000;
+  min-width:0;
+}
+
+/* ── GAME OVERLAY (lives inside terminal) ──── */
+#game-overlay{
+  display:none;
+  position:absolute;inset:0;
+  background:#fff;
+  flex-direction:column;
+  z-index:50;
+  border-top:2px solid #000;
+}
+#game-overlay.show{display:flex;}
+#game-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 10px;
+  border-bottom:2px solid #000;
+  font-size:7px;
+  flex-shrink:0;
+  background:repeating-linear-gradient(90deg,#000 0,#000 1px,#fff 1px,#fff 3px);
+}
+#game-header span{background:#fff;padding:0 6px;}
+#game-header button{
+  background:#000;color:#fff;border:none;
+  font-family:'Press Start 2P',monospace;font-size:6px;
+  padding:2px 7px;cursor:pointer;
+}
+#game-header button:hover{background:#444;}
+#game-canvas-wrap{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  background:#fff;
+  position:relative;
+  min-height:0;
+}
+#game-canvas{
+  image-rendering:pixelated;
+  display:block;
+  border:2px solid #000;
+}
+#game-footer{
+  padding:4px 10px;
+  border-top:2px solid #000;
+  font-size:6px;color:#555;
+  text-align:center;
+  flex-shrink:0;
+  background:#fff;
+}
+/* game-over / start screen overlay on canvas */
+#game-msg{
+  display:none;
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#fff;
+  border:2px solid #000;
+  box-shadow:3px 3px 0 #000;
+  padding:14px 18px;
+  text-align:center;
+  font-size:7px;
+  line-height:2.2;
+  pointer-events:none;
+  z-index:10;
+}
+#game-msg.show{display:block;}
+
+/* ── CONTACT WINDOW ────────────────────────── */
+.cf-field{margin-bottom:11px;}
+.cf-field label{display:block;font-size:7px;margin-bottom:4px;}
+.cf-field input,.cf-field textarea{
+  width:100%;
+  border:2px solid #000;
+  padding:6px 8px;
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  outline:none;
+  background:#fff;
+  color:#000;
+  resize:none;
+  display:block;
+}
+.cf-field input:focus,.cf-field textarea:focus{outline:2px solid #000;outline-offset:1px;}
+.cf-field textarea{height:68px;}
+.mac-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  border:2px solid #000;
+  padding:7px 14px;
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  cursor:pointer;
+  background:#fff;color:#000;
+  box-shadow:2px 2px 0 #000;
+}
+.mac-btn:active{transform:translate(2px,2px);box-shadow:none;}
+.mac-btn:hover{background:#000;color:#fff;}
+.mac-btn.inv{background:#000;color:#fff;box-shadow:2px 2px 0 #555;}
+.mac-btn.inv:hover{background:#333;}
+
+/* ── INTERNET EXPLORER WINDOW ──────────────── */
+#win-ie .mac-body{
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.ie-toolbar{
+  display:flex;align-items:center;
+  gap:4px;
+  padding:5px 8px;
+  border-bottom:2px solid #000;
+  background:#fff;
+  flex-shrink:0;
+}
+.ie-nav-btn{
+  min-width:22px;height:18px;padding:0 5px;
+  border:1.5px solid #000;
+  background:#fff;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:6px;
+  font-family:'Press Start 2P',monospace;
+  flex-shrink:0;
+}
+.ie-nav-btn:hover{background:#000;color:#fff;}
+.ie-nav-btn:disabled{opacity:0.3;cursor:default;}
+.ie-nav-btn:disabled:hover{background:#fff;color:#000;}
+.ie-url-bar{
+  flex:1;min-width:0;
+  border:2px solid #000;
+  padding:2px 7px;
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  outline:none;
+  background:#fff;
+  color:#000;
+}
+.ie-url-bar:focus{outline:1px solid #000;outline-offset:1px;}
+.ie-go-btn{
+  border:2px solid #000;
+  padding:2px 8px;
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  cursor:pointer;
+  background:#000;color:#fff;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.ie-go-btn:hover{background:#444;}
+.ie-statusbar{
+  height:18px;
+  border-top:2px solid #000;
+  display:flex;align-items:center;
+  padding:0 8px;
+  font-size:6px;
+  color:#555;
+  background:#fff;
+  flex-shrink:0;
+  gap:8px;
+}
+.ie-status-dot{
+  width:6px;height:6px;
+  border:1px solid #000;
+  border-radius:50%;
+  flex-shrink:0;
+}
+.ie-status-dot.loading{background:#000;animation:ieBlink 0.5s step-end infinite;}
+.ie-status-dot.done{background:#fff;}
+@keyframes ieBlink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* Content + sidebar layout */
+.ie-content-area{flex:1;display:flex;min-width:0;overflow:hidden;}
+.ie-fav-bar{
+  width:140px;border-right:2px solid #000;
+  background:#fff;flex-shrink:0;overflow-y:auto;font-size:6px;
+}
+.ie-fav-bar::-webkit-scrollbar{width:10px;}
+.ie-fav-bar::-webkit-scrollbar-track{background:#fff;border-left:1px solid #000;}
+.ie-fav-bar::-webkit-scrollbar-thumb{background:repeating-linear-gradient(45deg,#000 0,#000 2px,#fff 2px,#fff 4px);border:1px solid #000;}
+.ie-fav-title{background:repeating-linear-gradient(90deg,#000 0,#000 1px,#fff 1px,#fff 3px);padding:5px 8px;font-size:6px;}
+.ie-fav-title span{background:#fff;padding:0 4px;}
+.ie-fav-item{padding:5px 10px;cursor:pointer;border-bottom:1px solid #eee;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ie-fav-item:hover{background:#000;color:#fff;}
+.ie-fav-cat{padding:4px 8px;font-size:5.5px;color:#999;letter-spacing:0.08em;border-bottom:1px solid #eee;background:#f8f8f8;}
+.ie-fav-bar.hidden{display:none;}
+
+/* ── Preview viewport (replaces iframe) ─── */
+#ie-viewport{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  background:#fff;
+  position:relative;
+}
+#ie-viewport::-webkit-scrollbar{width:14px;}
+#ie-viewport::-webkit-scrollbar-track{background:#fff;border-left:1px solid #000;}
+#ie-viewport::-webkit-scrollbar-thumb{background:repeating-linear-gradient(45deg,#000 0,#000 2px,#fff 2px,#fff 4px);border:1px solid #000;}
+
+/* Loading shimmer */
+#ie-loading{
+  display:none;
+  position:absolute;inset:0;
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;
+  background:#fff;z-index:2;
+}
+#ie-loading.show{display:flex;}
+.ie-loading-bar-wrap{width:200px;border:2px solid #000;height:12px;background:#fff;}
+.ie-loading-bar{
+  height:100%;width:0%;
+  background:repeating-linear-gradient(90deg,#000 0,#000 8px,#fff 8px,#fff 10px);
+  transition:width 0.1s linear;
+}
+.ie-loading-txt{font-size:7px;color:#555;}
+
+/* ── Preview card ─────────────────────────── */
+.ie-card{
+  padding:24px 28px;
+  display:flex;flex-direction:column;
+  gap:0;
+}
+/* hero banner */
+.ie-card-banner{
+  width:100%;
+  height:100px;
+  border:2px solid #000;
+  border-bottom:none;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.ie-card-banner canvas{image-rendering:pixelated;}
+/* main info box */
+.ie-card-info{
+  border:2px solid #000;
+  padding:14px 16px;
+  display:flex;flex-direction:column;
+  gap:10px;
+}
+.ie-card-top{display:flex;align-items:flex-start;gap:14px;}
+.ie-card-logo{
+  width:48px;height:48px;flex-shrink:0;
+  border:2px solid #000;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+  background:#fff;
+}
+.ie-card-meta{flex:1;}
+.ie-card-name{font-size:10px;margin-bottom:5px;}
+.ie-card-url{font-size:6px;color:#888;margin-bottom:7px;word-break:break-all;}
+.ie-card-desc{font-size:7px;line-height:2.2;color:#333;}
+.ie-card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.ie-card-tag{border:1px solid #000;padding:2px 7px;font-size:6px;}
+/* divider */
+.ie-card-divider{
+  width:100%;height:2px;
+  background:repeating-linear-gradient(90deg,#000 0,#000 4px,#fff 4px,#fff 6px);
+  margin:10px 0;
+}
+/* stats row */
+.ie-card-stats{display:flex;gap:0;border:2px solid #000;border-top:none;}
+.ie-stat{
+  flex:1;padding:8px 6px;text-align:center;
+  border-right:1px solid #000;
+}
+.ie-stat:last-child{border-right:none;}
+.ie-stat .isv{font-size:11px;}
+.ie-stat .isl{font-size:5.5px;color:#666;margin-top:3px;}
+/* action buttons */
+.ie-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.ie-action-btn{
+  border:2px solid #000;
+  padding:7px 14px;
+  font-family:'Press Start 2P',monospace;
+  font-size:7px;
+  cursor:pointer;
+  background:#000;color:#fff;
+  box-shadow:2px 2px 0 #555;
+  text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.ie-action-btn:hover{background:#333;}
+.ie-action-btn.ghost{background:#fff;color:#000;box-shadow:2px 2px 0 #000;}
+.ie-action-btn.ghost:hover{background:#000;color:#fff;}
+/* new tab hint */
+.ie-newtab-hint{
+  font-size:6px;color:#aaa;
+  margin-top:8px;
+  border-top:1px solid #eee;
+  padding-top:8px;
+}
+/* home/blank screen */
+.ie-home-screen{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px 28px;gap:16px;
+  min-height:200px;
+}
+.ie-home-screen canvas{image-rendering:pixelated;}
+.ie-home-title{font-size:10px;text-align:center;}
+.ie-home-sub{font-size:6.5px;color:#777;text-align:center;line-height:2;}
+.ie-home-links{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;}
+.ie-home-link{
+  border:1px solid #000;padding:4px 10px;
+  font-size:6px;cursor:pointer;
+}
+.ie-home-link:hover{background:#000;color:#fff;}
+
+/* ── ALERT DIALOG ──────────────────────────── */
+#mac-alert{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.35);
+  z-index:3000;
+  align-items:center;justify-content:center;
+}
+#mac-alert.show{display:flex;}
+.alert-box{
+  background:#fff;border:3px solid #000;
+  box-shadow:5px 5px 0 #000;
+  padding:22px 24px;
+  min-width:240px;max-width:320px;
+}
+.alert-box p{font-size:7.5px;line-height:2.2;margin-bottom:18px;}
+.alert-btns{display:flex;gap:10px;justify-content:flex-end;}
+
+
+/* ══════════════════════════════════════════════
+   MOBILE / iOS-LIKE LAYOUT (max-width: 768px)
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Hide desktop menu items, center clock like iOS status bar */
+  .mb-item { display: none !important; }
+  #mb-clock { margin: 0 auto !important; padding: 0 !important; font-size: 8px !important; }
+
+  /* Desktop icons become iOS home screen grid */
+  .desk-icons {
+    position: absolute;
+    top: 24px; left: 10px; right: 10px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
+    gap: 16px;
+  }
+  .dsk-icon { width: 72px; padding: 6px; }
+  .dsk-icon span { font-size: 7px; margin-top: 4px; }
+
+  /* Dock mimics iOS bottom dock */
+  #dock {
+    height: 60px;
+    padding: 0 8px;
+    gap: 0;
+    justify-content: space-around;
+  }
+  .dk-item { min-width: 44px; padding: 4px; }
+  .dk-label { display: none; /* hide labels on dock for iOS look */ }
+  .dk-sep { display: none; }
+
+  /* Windows become full-screen apps */
+  .mac-win {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important;
+    z-index: 5000 !important; /* well above everything else */
+    transform: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Make Titlebar bigger for touch */
+  .mac-tb {
+    height: 38px;
+    padding: 6px 8px;
+  }
+  .tb-title { line-height: 24px; }
+  .tb-btn {
+    width: 24px; height: 24px; font-size: 14px;
+  }
+  /* Hide zoom and resize for mobile */
+  .tb-btn:last-child { display: none !important; }
+  .mac-rsz { display: none !important; }
+
+  /* Terminal fixes to ensure input isn't hidden by keyboard */
+  #win-terminal { height: 100% !important; }
+
+  /* IE adjustments */
+  #win-ie { height: 100% !important; }
+  .ie-toolbar { flex-wrap: wrap; height: auto; }
+  .ie-nav-btn { width: 28px; height: 24px; font-size: 12px; }
+  .ie-url-bar { font-size: 9px; padding: 6px; }
+  .ie-content-area { flex-direction: column; }
+  .ie-fav-bar {
+    width: 100%; border-right: none; border-bottom: 2px solid #000;
+    max-height: 120px;
+  }
+  .ie-card-logo { width: 36px; height: 36px; font-size: 18px; }
+  .ie-card-name { font-size: 9px; }
+
+  /* Contact window */
+  .cf-field input, .cf-field textarea { font-size: 9px; padding: 8px; }
+  .mac-btn { padding: 10px 16px; font-size: 9px; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE — applied when <body data-theme="dark">
+   Flips the black-on-white Mac aesthetic to white-on-dark.
+   None of these rules existed before; that's why dark/light
+   terminal commands had no visible effect.
+══════════════════════════════════════════════════════════════ */
+
+body[data-theme="dark"]{ background:#111; color:#e8e8e8; }
+
+/* ── Menu bar ────────────────────────────────────────────────── */
+body[data-theme="dark"] #menubar{ background:#1a1a1a; border-bottom-color:#555; }
+body[data-theme="dark"] .mb-item:hover,
+body[data-theme="dark"] .mb-item.open{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mb-sep-v{ background:#444; }
+body[data-theme="dark"] .mb-right{ color:#888; }
+body[data-theme="dark"] .mb-dropdown{ background:#1a1a1a; border-color:#555; box-shadow:3px 3px 0 #000; }
+body[data-theme="dark"] .dd-row{ color:#ddd; border-bottom-color:#333; }
+body[data-theme="dark"] .dd-row:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .dd-hr{ background:#555; }
+
+/* ── Desktop ─────────────────────────────────────────────────── */
+body[data-theme="dark"] #desktop{
+  background:#111;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 19px,rgba(255,255,255,0.04) 19px,rgba(255,255,255,0.04) 20px),
+    repeating-linear-gradient(90deg,transparent,transparent 19px,rgba(255,255,255,0.04) 19px,rgba(255,255,255,0.04) 20px);
+}
+body[data-theme="dark"] #desktop::after{
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,0.02) 0px,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 4px);
+}
+body[data-theme="dark"] .dsk-icon:hover,
+body[data-theme="dark"] .dsk-icon.sel{ border-color:#666; background:rgba(255,255,255,0.07); }
+body[data-theme="dark"] .dsk-icon span{ color:#ddd; }
+
+/* ── Dock ────────────────────────────────────────────────────── */
+body[data-theme="dark"] #dock{ background:#1a1a1a; border-top-color:#555; }
+body[data-theme="dark"] #dock::after{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1a1a1a 4px,#1a1a1a 8px);
+}
+body[data-theme="dark"] .dk-item:hover{ background:rgba(255,255,255,0.08); border-color:#666; box-shadow:0 4px 0 #000; }
+body[data-theme="dark"] .dk-item.running::after{ background:#e8e8e8; }
+body[data-theme="dark"] .dk-label{ color:#bbb; }
+body[data-theme="dark"] .dk-sep{ background:repeating-linear-gradient(180deg,#555 0,#555 3px,#1a1a1a 3px,#1a1a1a 6px); }
+
+/* ── Windows ─────────────────────────────────────────────────── */
+body[data-theme="dark"] .mac-win{ background:#1e1e1e; border-color:#555; box-shadow:4px 4px 0 #000; }
+body[data-theme="dark"] .mac-tb{ background:#2a2a2a; border-bottom-color:#555; }
+body[data-theme="dark"] .mac-win.active .mac-tb{
+  background-image:repeating-linear-gradient(0deg,#666 0,#666 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .mac-win.active .mac-tb .tb-title{ background:#2a2a2a; color:#e8e8e8; }
+body[data-theme="dark"] .mac-win.active .mac-tb .tb-btn{ box-shadow:0 0 0 2px #2a2a2a; }
+body[data-theme="dark"] .tb-btn{ border-color:#666; background:#2a2a2a; color:#ddd; }
+body[data-theme="dark"] .tb-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .tb-title{ color:#e8e8e8; }
+body[data-theme="dark"] .mac-body::-webkit-scrollbar-track{ background:#1e1e1e; border-left-color:#444; }
+body[data-theme="dark"] .mac-body::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1e1e1e 2px,#1e1e1e 4px);
+  border-color:#444;
+}
+body[data-theme="dark"] .mac-rsz{
+  background:
+    linear-gradient(135deg,transparent 40%,#555 40%,#555 55%,transparent 55%) no-repeat 2px 2px / 10px 10px,
+    linear-gradient(135deg,transparent 40%,#555 40%,#555 55%,transparent 55%) no-repeat 6px 6px / 8px 8px;
+}
+body[data-theme="dark"] .divider{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1e1e1e 4px,#1e1e1e 6px);
+}
+
+/* ── About ───────────────────────────────────────────────────── */
+body[data-theme="dark"] .aw-avatar{ border-color:#555; }
+body[data-theme="dark"] .aw-info p{ color:#aaa; }
+body[data-theme="dark"] .stat-box{ border-color:#555; }
+body[data-theme="dark"] .stat-box .sl{ color:#888; }
+body[data-theme="dark"] .badge{ border-color:#555; background:#2a2a2a; color:#ddd; }
+body[data-theme="dark"] .badge:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Skills ──────────────────────────────────────────────────── */
+body[data-theme="dark"] .sk-cat-h{ border-bottom-color:#555; }
+body[data-theme="dark"] .chip{ border-color:#555; color:#ddd; }
+body[data-theme="dark"] .chip:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Projects ────────────────────────────────────────────────── */
+body[data-theme="dark"] .pc{ border-color:#555; background:#1e1e1e; }
+body[data-theme="dark"] .pc-head{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .pc-head span{ background:#1e1e1e; color:#e8e8e8; }
+body[data-theme="dark"] .pc-body p{ color:#aaa; }
+body[data-theme="dark"] .pc-tag{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .pc-link{ border-color:#555; color:#ddd; background:#2a2a2a; }
+body[data-theme="dark"] .pc-link:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Terminal ────────────────────────────────────────────────── */
+body[data-theme="dark"] .term-inner{ background:#111; }
+body[data-theme="dark"] #term-out::-webkit-scrollbar-track{ background:#111; border-left-color:#333; }
+body[data-theme="dark"] #term-out::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#111 2px,#111 4px);
+  border-color:#333;
+}
+body[data-theme="dark"] .term-block .t-cmd{ color:#e8e8e8; }
+body[data-theme="dark"] .term-block .t-out{ color:#aaa; }
+body[data-theme="dark"] .term-block .t-err{ color:#ff6b6b; }
+body[data-theme="dark"] .term-input-row{ background:#111; border-top-color:#444; }
+body[data-theme="dark"] .term-input-row .t-prompt{ color:#e8e8e8; }
+body[data-theme="dark"] #term-in{ color:#e8e8e8; caret-color:#e8e8e8; }
+
+/* ── Game overlay ────────────────────────────────────────────── */
+body[data-theme="dark"] #game-overlay{ background:#111; border-top-color:#444; }
+body[data-theme="dark"] #game-header{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+  border-bottom-color:#555;
+}
+body[data-theme="dark"] #game-header span{ background:#2a2a2a; color:#e8e8e8; }
+body[data-theme="dark"] #game-canvas-wrap{ background:#111; }
+body[data-theme="dark"] #game-footer{ background:#1a1a1a; border-top-color:#444; color:#888; }
+body[data-theme="dark"] #game-msg{ background:#1e1e1e; border-color:#555; box-shadow:3px 3px 0 #000; color:#e8e8e8; }
+
+/* ── Contact ─────────────────────────────────────────────────── */
+body[data-theme="dark"] .cf-field label{ color:#ccc; }
+body[data-theme="dark"] .cf-field input,
+body[data-theme="dark"] .cf-field textarea{ background:#1e1e1e; border-color:#555; color:#e8e8e8; }
+body[data-theme="dark"] .cf-field input:focus,
+body[data-theme="dark"] .cf-field textarea:focus{ outline-color:#777; }
+body[data-theme="dark"] .mac-btn{ background:#2a2a2a; border-color:#555; color:#ddd; box-shadow:2px 2px 0 #000; }
+body[data-theme="dark"] .mac-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mac-btn.inv{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .mac-btn.inv:hover{ background:#ccc; }
+
+/* ── Internet Explorer ───────────────────────────────────────── */
+body[data-theme="dark"] .ie-toolbar{ background:#1a1a1a; border-bottom-color:#555; }
+body[data-theme="dark"] .ie-nav-btn{ background:#2a2a2a; border-color:#555; color:#ddd; }
+body[data-theme="dark"] .ie-nav-btn:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-nav-btn:disabled:hover{ background:#2a2a2a; color:#555; }
+body[data-theme="dark"] .ie-url-bar{ background:#111; border-color:#555; color:#e8e8e8; }
+body[data-theme="dark"] .ie-go-btn{ background:#e8e8e8; color:#111; border-color:#555; }
+body[data-theme="dark"] .ie-go-btn:hover{ background:#ccc; }
+body[data-theme="dark"] .ie-statusbar{ background:#1a1a1a; border-top-color:#555; color:#888; }
+body[data-theme="dark"] .ie-status-dot{ border-color:#555; }
+body[data-theme="dark"] .ie-status-dot.done{ background:#333; }
+/* fav sidebar */
+body[data-theme="dark"] .ie-fav-bar{ background:#1a1a1a; border-right-color:#555; }
+body[data-theme="dark"] .ie-fav-bar::-webkit-scrollbar-track{ background:#1a1a1a; border-left-color:#333; }
+body[data-theme="dark"] .ie-fav-bar::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1a1a1a 2px,#1a1a1a 4px);
+  border-color:#333;
+}
+body[data-theme="dark"] .ie-fav-title{
+  background:repeating-linear-gradient(90deg,#555 0,#555 1px,#2a2a2a 1px,#2a2a2a 3px);
+}
+body[data-theme="dark"] .ie-fav-title span{ background:#1a1a1a; color:#e8e8e8; }
+body[data-theme="dark"] .ie-fav-item{ color:#ccc; border-bottom-color:#333; }
+body[data-theme="dark"] .ie-fav-item:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-fav-cat{ color:#666; background:#111; border-bottom-color:#333; }
+/* viewport & cards */
+body[data-theme="dark"] #ie-viewport{ background:#1e1e1e; }
+body[data-theme="dark"] #ie-viewport::-webkit-scrollbar-track{ background:#1e1e1e; border-left-color:#444; }
+body[data-theme="dark"] #ie-viewport::-webkit-scrollbar-thumb{
+  background:repeating-linear-gradient(45deg,#555 0,#555 2px,#1e1e1e 2px,#1e1e1e 4px);
+  border-color:#444;
+}
+body[data-theme="dark"] #ie-loading{ background:#1e1e1e; }
+body[data-theme="dark"] .ie-loading-txt{ color:#888; }
+body[data-theme="dark"] .ie-card-banner{ border-color:#555; }
+body[data-theme="dark"] .ie-card-info{ border-color:#555; }
+body[data-theme="dark"] .ie-card-logo{ border-color:#555; background:#2a2a2a; }
+body[data-theme="dark"] .ie-card-name{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-card-url{ color:#888; }
+body[data-theme="dark"] .ie-card-desc{ color:#aaa; }
+body[data-theme="dark"] .ie-card-tag{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .ie-card-divider{
+  background:repeating-linear-gradient(90deg,#555 0,#555 4px,#1e1e1e 4px,#1e1e1e 6px);
+}
+body[data-theme="dark"] .ie-card-stats{ border-color:#555; }
+body[data-theme="dark"] .ie-stat{ border-right-color:#444; }
+body[data-theme="dark"] .ie-stat .isv{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-stat .isl{ color:#777; }
+body[data-theme="dark"] .ie-action-btn.ghost{ background:#2a2a2a; color:#ddd; box-shadow:2px 2px 0 #000; }
+body[data-theme="dark"] .ie-action-btn.ghost:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .ie-newtab-hint{ color:#555; border-top-color:#333; }
+body[data-theme="dark"] .ie-home-title{ color:#e8e8e8; }
+body[data-theme="dark"] .ie-home-sub{ color:#888; }
+body[data-theme="dark"] .ie-home-link{ border-color:#555; color:#ccc; }
+body[data-theme="dark"] .ie-home-link:hover{ background:#e8e8e8; color:#111; }
+
+/* ── Alert dialog ────────────────────────────────────────────── */
+body[data-theme="dark"] .alert-box{ background:#1e1e1e; border-color:#555; box-shadow:5px 5px 0 #000; color:#e8e8e8; }
+
+/* ── IE Fav toggle — CSS class replaces inline style ────────── */
+/* ieFavToggle() now adds/removes class "active" instead of inline style */
+#ie-fav-toggle.active{ background:#000 !important; color:#fff !important; }
+body[data-theme="dark"] #ie-fav-toggle{ background:#2a2a2a; border-color:#555; color:#ddd; }
+body[data-theme="dark"] #ie-fav-toggle.active{ background:#e8e8e8 !important; color:#111 !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE POLISH — Phase 2
+   Fixes: icon visibility, grey text contrast, projects scroll
+══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Canvas icons: invert black pixel art to white in dark mode ── */
+/* Desktop icons and dock icons are canvas-drawn with #000;
+   filter:invert(1) flips them to white so they're visible on dark bg */
+body[data-theme="dark"] .dsk-icon canvas{
+  filter: invert(1);
+}
+body[data-theme="dark"] .dk-item canvas{
+  filter: invert(1);
+}
+/* Avatar in About window — invert so it shows on dark background */
+body[data-theme="dark"] #av-canvas{
+  filter: invert(1);
+}
+
+/* ── 2. Grey text brightening for readability ─────────────────── */
+/* About window: bio text was #333 (near-invisible on dark) */
+body[data-theme="dark"] #about-content p[style],
+body[data-theme="dark"] .aw-info p{ color:#c8c8c8 !important; }
+
+/* Skills window header */
+body[data-theme="dark"] .sk-cat-h{ color:#e0e0e0; }
+
+/* Projects window: card body paragraph text (#333 → bright) */
+body[data-theme="dark"] .pc-body p{ color:#c0c0c0 !important; }
+
+/* PC tag text */
+body[data-theme="dark"] .pc-tag{ color:#d0d0d0; }
+
+/* Stat box sub-label */
+body[data-theme="dark"] .stat-box .sl{ color:#aaa; }
+
+/* IE card description & URL */
+body[data-theme="dark"] .ie-card-desc{ color:#c0c0c0 !important; }
+body[data-theme="dark"] .ie-card-url{ color:#999; }
+
+/* Terminal output text */
+body[data-theme="dark"] .term-block .t-out{ color:#c8c8c8; }
+
+/* Footer / hint text */
+body[data-theme="dark"] .ie-stat .isl{ color:#999; }
+
+/* Desktop icon labels were #ddd but may be low-contrast */
+body[data-theme="dark"] .dsk-icon span{ color:#e8e8e8 !important; }
+
+/* Inline hardcoded grey text in terminal welcome (see index.html line 184-185) */
+body[data-theme="dark"] #term-out [style*="color:#777"],
+body[data-theme="dark"] #term-out [style*="color:#aaa"]{
+  color:#aaa !important;
+}
+body[data-theme="dark"] #term-out b[style*="color:#000"]{
+  color:#e8e8e8 !important;
+}
+
+/* Dock running dot — ensure it's visible */
+body[data-theme="dark"] .dk-item.running::after{
+  background:#e8e8e8;
+  box-shadow: 0 0 3px #e8e8e8;
+}
+
+/* ── 3. Projects window — enforce height so mac-body can scroll ── */
+/* Without a height, mac-win grows to fit all content (no overflow).
+   Setting max-height makes mac-body's overflow:auto kick in. */
+#win-projects{
+  height: 400px;
+}
+/* On mobile this is handled by the full-screen override already */
+@media (min-width: 769px){
+  #win-projects{
+    max-height: calc(100vh - 120px); /* never taller than viewport minus bars */
+  }
+}
+
+
+
+
+/* ── VC·AI chat window ───────────────────────────────── */
+#chat-log{flex:1;min-height:0;overflow-y:auto;padding:10px 12px;background:#fff;}
+.chat-msg{margin-bottom:12px;}
+.chat-who{font-size:6px;color:#777;margin-bottom:4px;}
+#chat-status{margin-left:6px;color:#555;}
+.chat-text{font-size:8px;line-height:2;white-space:pre-wrap;word-wrap:break-word;color:#000;}
+.chat-msg.user .chat-text{border:2px solid #000;padding:6px 8px;box-shadow:2px 2px 0 #000;display:inline-block;max-width:92%;}
+.chat-text.chat-err{font-style:italic;color:#555;}
+#chat-suggest{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.chat-chip{font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.8;text-align:left;border:1px dashed #000;background:#fff;color:#000;padding:6px 8px;cursor:pointer;}
+.chat-chip:hover{background:#000;color:#fff;}
+.chat-input-row{display:flex;gap:8px;padding:8px 10px;border-top:2px solid #000;background:#fff;}
+.chat-input-row input{flex:1;min-width:0;border:2px solid #000;padding:7px;font-family:'Press Start 2P',monospace;font-size:7px;background:#fff;color:#000;}
+.chat-input-row input:focus{outline:2px solid #000;outline-offset:1px;}
+.chat-input-row button:disabled{opacity:.5;cursor:default;}
+#chat-log::-webkit-scrollbar{width:10px;}
+#chat-log::-webkit-scrollbar-track{background:#fff;border-left:1px solid #000;}
+#chat-log::-webkit-scrollbar-thumb{background:repeating-linear-gradient(45deg,#000 0,#000 2px,#fff 2px,#fff 4px);border:1px solid #000;}
+
+body[data-theme="dark"] #chat-log,
+body[data-theme="dark"] .chat-input-row{ background:#111; border-color:#444; }
+body[data-theme="dark"] .chat-text{ color:#e8e8e8; }
+body[data-theme="dark"] .chat-who,
+body[data-theme="dark"] #chat-status{ color:#999; }
+body[data-theme="dark"] .chat-msg.user .chat-text{ border-color:#aaa; box-shadow:2px 2px 0 #aaa; }
+body[data-theme="dark"] .chat-chip{ background:#1e1e1e; color:#e8e8e8; border-color:#666; }
+body[data-theme="dark"] .chat-chip:hover{ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .chat-input-row input{ background:#1e1e1e; color:#e8e8e8; border-color:#aaa; }
+body[data-theme="dark"] #chat-log::-webkit-scrollbar-track{ background:#111; border-left-color:#333; }
+
+.chat-sources{font-size:6px;line-height:1.9;color:#777;margin-top:6px;padding-top:5px;border-top:1px dashed #999;word-wrap:break-word;}
+body[data-theme="dark"] .chat-sources{ color:#999; border-top-color:#555; }
+
+/* ── Flow Monitor ────────────────────────────────────── */
+.flow-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;border-bottom:2px solid #000;background:#fff;}
+#flow-speed{display:flex;}
+#flow-speed button{font-family:'Press Start 2P',monospace;font-size:7px;border:2px solid #000;margin-left:-2px;padding:7px 8px;background:#fff;color:#000;cursor:pointer;}
+#flow-speed button:first-child{margin-left:0;}
+#flow-speed button.on{background:#000;color:#fff;}
+.flow-toolbar .mac-btn{padding:6px 8px;}
+.flow-toolbar .mac-btn:disabled{opacity:.4;cursor:default;box-shadow:none;}
+.flow-sync{font-size:6px;display:flex;align-items:center;gap:4px;cursor:pointer;}
+#flow-mode-hint{font-size:6px;color:#666;padding:5px 10px;border-bottom:1px dashed #999;background:#fff;}
+#flow-graph{padding:8px 10px 2px;background:#fff;flex:none;}
+#flow-graph svg{width:100%;height:auto;display:block;max-height:300px;}
+#flow-graph[data-layout="tall"] svg{max-height:440px;}
+#flow-status{font-size:6px;color:#444;padding:2px 10px 6px;border-bottom:2px solid #000;background:#fff;min-height:12px;}
+.flow-scroll{flex:1;min-height:0;overflow-y:auto;background:#fff;}
+
+.fl-box{fill:#fff;stroke:#000;stroke-width:2;}
+.fl-label{font-family:'Press Start 2P',monospace;font-size:8.5px;text-anchor:middle;fill:#000;}
+.fl-sub{font-family:'Press Start 2P',monospace;font-size:6.5px;text-anchor:middle;fill:#666;}
+.fl-mark{font-family:'Press Start 2P',monospace;font-size:5.5px;text-anchor:end;fill:#000;}
+.fl-node{cursor:pointer;outline:none;}
+.fl-node:focus-visible .fl-box{stroke-dasharray:3 2;}
+.fl-node.sel .fl-box{stroke-width:3.5;}
+.fl-node.active .fl-box{fill:#000;}
+.fl-node.active .fl-label,.fl-node.active .fl-mark{fill:#fff;}
+.fl-node.active .fl-sub{fill:#ccc;}
+
+@keyframes fl-pulse{50%{opacity:.78;}}
+.fl-node.ok .fl-box{stroke-width:3;}
+.fl-node.skipped .fl-box{stroke:#999;stroke-dasharray:4 3;}
+.fl-node.skipped .fl-label,.fl-node.skipped .fl-sub,.fl-node.skipped .fl-mark{fill:#999;}
+.fl-node.empty .fl-box{stroke-dasharray:2 3;stroke-width:3;}
+.fl-node.blocked .fl-box,.fl-node.error .fl-box{fill:#e6e6e6;stroke-width:4;}
+.fl-edge{fill:none;stroke:#aaa;stroke-width:2;stroke-dasharray:4 3;}
+.fl-edge.lit{stroke:#000;stroke-dasharray:none;}
+.fl-ah{fill:#555;}
+.fl-packet{fill:#000;stroke:#fff;stroke-width:1.5;}
+
+#flow-detail{padding:8px 10px;font-size:7px;line-height:1.9;}
+.fd-title{font-size:8px;margin-bottom:4px;text-decoration:underline;}
+.fd-line{color:#444;margin:2px 0;}
+.fd-row{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 38px;gap:6px;align-items:center;cursor:pointer;margin:3px 0;padding:2px 0;border-bottom:1px dotted #bbb;}
+.fd-row.fail{opacity:.55;}
+.fd-rl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fd-bar{position:relative;height:6px;border:1px solid #000;background:#fff;}
+.fd-bar i{display:block;height:100%;background:#000;}
+.fd-bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:#000;box-shadow:0 0 0 1px #fff;}
+.fd-sc{text-align:right;color:#444;}
+.fd-text{grid-column:1 / -1;white-space:pre-wrap;word-wrap:break-word;color:#333;background:#f3f3f3;border:1px dashed #999;padding:5px 7px;cursor:text;}
+.fd-text[hidden]{display:none;}
+#flow-log{border-top:1px dashed #999;padding:6px 10px;font-family:monospace;font-size:10px;line-height:1.5;color:#555;white-space:pre;overflow-x:auto;max-height:110px;overflow-y:auto;}
+
+body[data-theme="dark"] .flow-toolbar,body[data-theme="dark"] #flow-mode-hint,body[data-theme="dark"] #flow-graph,
+body[data-theme="dark"] #flow-status,body[data-theme="dark"] .flow-scroll{background:#111;border-color:#444;color:#e8e8e8;}
+body[data-theme="dark"] #flow-speed button{background:#1e1e1e;color:#e8e8e8;border-color:#aaa;}
+body[data-theme="dark"] #flow-speed button.on{background:#e8e8e8;color:#111;}
+body[data-theme="dark"] #flow-mode-hint,body[data-theme="dark"] #flow-status{color:#999;}
+body[data-theme="dark"] .fl-box{fill:#1e1e1e;stroke:#e8e8e8;}
+body[data-theme="dark"] .fl-label,body[data-theme="dark"] .fl-mark{fill:#e8e8e8;}
+body[data-theme="dark"] .fl-sub{fill:#999;}
+body[data-theme="dark"] .fl-node.active .fl-box{fill:#e8e8e8;}
+body[data-theme="dark"] .fl-node.active .fl-label,body[data-theme="dark"] .fl-node.active .fl-mark{fill:#111;}
+body[data-theme="dark"] .fl-node.active .fl-sub{fill:#444;}
+body[data-theme="dark"] .fl-node.blocked .fl-box,body[data-theme="dark"] .fl-node.error .fl-box{fill:#3a3a3a;}
+body[data-theme="dark"] .fl-edge{stroke:#555;}
+body[data-theme="dark"] .fl-edge.lit{stroke:#e8e8e8;}
+body[data-theme="dark"] .fl-ah{fill:#aaa;}
+body[data-theme="dark"] .fl-packet{fill:#e8e8e8;stroke:#111;}
+body[data-theme="dark"] .fd-line,body[data-theme="dark"] .fd-sc,body[data-theme="dark"] #flow-log{color:#aaa;}
+body[data-theme="dark"] .fd-bar{background:#111;border-color:#aaa;}
+body[data-theme="dark"] .fd-bar i{background:#e8e8e8;}
+body[data-theme="dark"] .fd-bar b{background:#e8e8e8;box-shadow:0 0 0 1px #111;}
+body[data-theme="dark"] .fd-text{background:#1e1e1e;color:#ccc;border-color:#555;}
+body[data-theme="dark"] .fd-row{border-bottom-color:#444;}
+body[data-theme="dark"] #flow-log{border-top-color:#444;}
+
+.chat-input-row .mac-btn{padding:7px 8px;}
+.fd-hint{color:#000;background:#f3f3f3;border:1px dashed #000;padding:4px 6px;}
+body[data-theme="dark"] .fd-hint{color:#e8e8e8;background:#1e1e1e;border-color:#aaa;}
+
+.fd-sub{font-size:7px;margin:8px 0 3px;text-decoration:underline;}
+.chat-agent{font-size:6px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;}
+.chat-agent input{margin:0;}
+
+/* status dot: drawn, not a glyph */
+.st-dot{display:inline-block;width:6px;height:6px;margin-right:5px;border:1px solid currentColor;vertical-align:middle;}
+.st-dot.on{background:currentColor;}
+.st-dot.wait{animation:fl-pulse .9s steps(2,end) infinite;}
+
+/* ── Flow Monitor motion: nodes glide, fade in/out, and the active stage glows ─────────────── */
+.fl-node{transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;}
+.fl-edge{transition:opacity .22s ease;}
+.fl-node.fl-enter,.fl-node.fl-leave,.fl-edge.fl-enter,.fl-edge.fl-leave{opacity:0;}
+.fl-node.fl-leave{pointer-events:none;}
+.fl-node.active{animation:fl-glow 1.4s ease-in-out infinite;}
+@keyframes fl-glow{0%,100%{filter:drop-shadow(0 0 0 rgba(0,0,0,0));}50%{filter:drop-shadow(0 0 5px rgba(0,0,0,.6));}}
+body[data-theme="dark"] .fl-node.active{animation-name:fl-glow-dark;}
+@keyframes fl-glow-dark{0%,100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0));}50%{filter:drop-shadow(0 0 5px rgba(255,255,255,.7));}}
+.fl-packet{filter:drop-shadow(0 0 3px rgba(0,0,0,.5));}
+body[data-theme="dark"] .fl-packet{filter:drop-shadow(0 0 3px rgba(255,255,255,.6));}
+#flow-graph{position:relative;}
+#flow-graph svg{transition:opacity .2s ease;}
+@media (prefers-reduced-motion: reduce){
+  .fl-node,.fl-edge,#flow-graph svg{transition:none;}
+  .fl-node.active,.st-dot.wait{animation:none;}
+}
+
+/* ── Activity window ─────────────────────────────────── */
+#act-window{display:flex;}
+#act-window button{font-family:'Press Start 2P',monospace;font-size:7px;border:2px solid #000;margin-left:-2px;padding:7px 8px;background:#fff;color:#000;cursor:pointer;}
+#act-window button:first-child{margin-left:0;}
+#act-window button.on{background:#000;color:#fff;}
+#act-body{padding:8px 12px;}
+.act-sec{margin-bottom:12px;}
+.act-h{font-size:7px;text-decoration:underline;margin-bottom:5px;}
+.act-kv{display:flex;justify-content:space-between;gap:10px;font-size:7px;line-height:2;border-bottom:1px dotted #bbb;}
+.act-k{color:#444;}
+.act-row{display:grid;grid-template-columns:78px 1fr 54px;gap:8px;align-items:center;font-size:7px;line-height:2;}
+.act-bar{height:7px;border:1px solid #000;background:#fff;}
+.act-bar i{display:block;height:100%;background:#000;transition:width .35s ease;}
+.act-rv{text-align:right;color:#444;}
+.act-note{font-size:7px;line-height:2;color:#444;padding:6px 0;}
+#act-foot{font-size:6px;line-height:1.8;color:#666;padding:6px 12px;border-top:2px solid #000;background:#fff;}
+body[data-theme="dark"] #act-window button{background:#1e1e1e;color:#e8e8e8;border-color:#aaa;}
+body[data-theme="dark"] #act-window button.on{background:#e8e8e8;color:#111;}
+body[data-theme="dark"] .act-bar{background:#111;border-color:#aaa;}
+body[data-theme="dark"] .act-bar i{background:#e8e8e8;}
+body[data-theme="dark"] .act-k,body[data-theme="dark"] .act-rv,body[data-theme="dark"] .act-note{color:#aaa;}
+body[data-theme="dark"] .act-kv{border-bottom-color:#444;}
+body[data-theme="dark"] #act-foot{background:#111;color:#999;border-top-color:#444;}
+@media (prefers-reduced-motion: reduce){ .act-bar i{transition:none;} }
+
+/* ── Form controls in the theme (no native blue ticks or system dropdowns) ─────────────── */
+.flow-sync input,.chat-agent input{
+  -webkit-appearance:none;appearance:none;width:10px;height:10px;margin:0;display:inline-block;vertical-align:middle;
+  border:2px solid #000;background:#fff;cursor:pointer;flex:none;
+}
+.flow-sync input:checked,.chat-agent input:checked{background:#000;box-shadow:inset 0 0 0 2px #fff;}
+.flow-sync input:focus-visible,.chat-agent input:focus-visible,#flow-runs:focus-visible{outline:2px dashed #000;outline-offset:2px;}
+#flow-runs{
+  -webkit-appearance:none;appearance:none;flex:1 1 150px;min-width:0;max-width:100%;
+  font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.4;color:#000;
+  border:2px solid #000;border-radius:0;background:#fff;padding:6px 20px 6px 8px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,#000 50%),linear-gradient(135deg,#000 50%,transparent 50%);
+  background-position:calc(100% - 11px) 55%,calc(100% - 6px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+#flow-runs:disabled{opacity:.45;cursor:default;}
+body[data-theme="dark"] .flow-sync input,body[data-theme="dark"] .chat-agent input{border-color:#e8e8e8;background:#111;}
+body[data-theme="dark"] .flow-sync input:checked,body[data-theme="dark"] .chat-agent input:checked{background:#e8e8e8;box-shadow:inset 0 0 0 2px #111;}
+body[data-theme="dark"] .flow-sync input:focus-visible,body[data-theme="dark"] .chat-agent input:focus-visible,body[data-theme="dark"] #flow-runs:focus-visible{outline-color:#e8e8e8;}
+body[data-theme="dark"] #flow-runs{color:#e8e8e8;border-color:#aaa;background-color:#1e1e1e;
+  background-image:linear-gradient(45deg,transparent 50%,#e8e8e8 50%),linear-gradient(135deg,#e8e8e8 50%,transparent 50%);}
+
+/* ── Read Me entry points ── */
+.mb-readme{margin-left:auto;align-self:center;font-size:7px;padding:4px 8px;margin-right:6px;background:#000;color:#fff;
+  text-decoration:none;border:2px solid #000;white-space:nowrap;}
+.mb-readme:hover{background:#fff;color:#000;}
+.mb-readme + .mb-right{margin-left:0;}
+.chat-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 10px;border-top:2px solid #000;background:#fff;font-size:6px;line-height:1.6;color:#555;}
+.chat-link{font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.4;border:1px dashed #000;background:#fff;color:#000;padding:4px 6px;cursor:pointer;white-space:nowrap;}
+.chat-link:hover:not(:disabled){background:#000;color:#fff;}
+.chat-link:disabled{opacity:.5;cursor:default;}
+.chat-link[hidden]{display:none;}
+.chat-link:focus-visible{outline:2px dashed #000;outline-offset:2px;}
+body[data-theme="dark"] .chat-meta{ background:#111; border-color:#444; color:#999; }
+body[data-theme="dark"] .chat-link{ background:#1e1e1e; color:#e8e8e8; border-color:#666; }
+body[data-theme="dark"] .chat-link:hover:not(:disabled){ background:#e8e8e8; color:#111; }
+body[data-theme="dark"] .chat-link:focus-visible{ outline-color:#e8e8e8; }
+.chat-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;}
+.chat-actions-q{font-size:6px;line-height:1.8;color:#555;}
+.chat-text.chat-note{font-style:italic;color:#555;}
+body[data-theme="dark"] .chat-actions-q,
+body[data-theme="dark"] .chat-text.chat-note{ color:#999; }
+.chat-readme{display:block;padding:6px 10px;border-top:2px solid #000;background:#f0f0f0;color:#000;font-size:7px;line-height:1.6;text-decoration:underline;}
+.chat-readme:hover{background:#000;color:#fff;}
+body[data-theme="dark"] .mb-readme{background:#e8e8e8;color:#111;border-color:#e8e8e8;}
+body[data-theme="dark"] .chat-readme{background:#1a1a1a;color:#ddd;border-color:#444;}
+@media (max-width: 768px){ .mb-readme{font-size:6px;padding:4px 6px;} }
+
+/* ── Striped headers: the label sits on a solid patch as tall as the bar ── */
+.pc-head span,.ie-fav-title span,#game-header span{display:inline-block;padding-top:2px;padding-bottom:2px;}
+
+/* ── Firefox has no ::-webkit-scrollbar: theme its scrollbars too (kept out of Chromium, where scrollbar-color would
+   switch the striped thumbs above off) ── */
+@supports (-moz-appearance:none){
+  .mac-body,#term-out,#chat-log,#ie-viewport,.ie-fav-bar,.flow-scroll,#flow-log{scrollbar-width:thin;scrollbar-color:#000 #fff;}
+  body[data-theme="dark"] .mac-body,body[data-theme="dark"] #term-out,body[data-theme="dark"] #chat-log,
+  body[data-theme="dark"] #ie-viewport,body[data-theme="dark"] .ie-fav-bar,body[data-theme="dark"] .flow-scroll,
+  body[data-theme="dark"] #flow-log{scrollbar-color:#777 #1e1e1e;}
+}
+
+/* ── Welcome: first-visit mode chooser ───────────────── */
+#welcome,#tour{display:none;position:fixed;inset:0;z-index:6000;}
+#welcome.show{display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);overflow:auto;}
+.wl-box{width:560px;max-width:100%;margin:auto;background:#fff;color:#000;border:3px solid #000;box-shadow:6px 6px 0 #000;animation:winPop .12s ease-out both;}
+.wl-tb{height:24px;padding:4px 6px;border-bottom:2px solid #000;text-align:center;
+  background-image:repeating-linear-gradient(0deg,#000 0,#000 1px,#fff 1px,#fff 3px);background-origin:content-box;background-clip:content-box;}
+.wl-tb span{display:inline-block;background:#fff;padding:0 10px;font-size:8px;line-height:14px;letter-spacing:.08em;}
+.wl-body{padding:20px 22px 16px;}
+.wl-guide{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.guide-face{image-rendering:pixelated;flex:none;border:2px solid #000;background:#fff;animation:guideBob 1.6s steps(2,end) infinite;}
+@keyframes guideBob{50%{transform:translateY(-2px);}}
+/* speech bubble with a pixel tail pointing at the guide */
+.wl-say,#tour-say{position:relative;flex:1;min-width:0;border:2px solid #000;background:#fff;color:#000;padding:10px 12px;font-size:8px;line-height:2;}
+.wl-say{min-height:60px;}
+.wl-say::before,#tour-say::before{content:'';position:absolute;left:-8px;top:16px;width:6px;height:6px;background:#fff;border:2px solid #000;border-right:none;}
+.wl-opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.wl-opt{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;cursor:pointer;
+  font-family:'Press Start 2P',monospace;color:#000;background:#fff;border:2px solid #000;box-shadow:3px 3px 0 #000;padding:14px 14px 12px;
+  transition:transform .08s,box-shadow .08s;}
+.wl-opt canvas{image-rendering:pixelated;width:32px;height:32px;display:block;}
+.wl-opt b{font-size:10px;font-weight:400;letter-spacing:.04em;}
+.wl-opt span{font-size:7px;line-height:2;color:#444;flex:1;}
+.wl-opt i{font-style:normal;font-size:6px;border:1px solid currentColor;padding:3px 6px;align-self:flex-end;}
+.wl-opt:hover,.wl-opt:focus-visible{background:#000;color:#fff;outline:none;transform:translate(-1px,-1px);box-shadow:4px 4px 0 #000,0 0 0 2px #fff inset;}
+.wl-opt:hover span,.wl-opt:focus-visible span{color:#ddd;}
+.wl-opt:hover canvas,.wl-opt:focus-visible canvas{filter:invert(1);}
+.wl-opt:active{transform:translate(3px,3px);box-shadow:none;}
+.wl-foot{margin-top:14px;font-size:6px;line-height:1.8;color:#666;text-align:center;}
+
+/* ── Tour: spotlight + guide card ────────────────────── */
+#tour.show{display:block;}
+#tour [hidden]{display:none !important;}
+/* the hole is a see-through box whose huge shadow dims everything around it */
+#tour-hole{position:fixed;border:2px dashed #fff;box-shadow:0 0 0 2px #000,0 0 0 200vmax rgba(0,0,0,.5);pointer-events:none;
+  transition:left .26s ease,top .26s ease,width .26s ease,height .26s ease;}
+#tour-hole.none{border-color:transparent;box-shadow:0 0 0 200vmax rgba(0,0,0,.5);}
+#tour-card{position:fixed;width:340px;max-width:calc(100vw - 24px);background:#fff;color:#000;border:3px solid #000;box-shadow:5px 5px 0 #000;
+  padding:14px;transition:left .26s ease,top .26s ease;}
+.tour-head{display:flex;align-items:flex-start;gap:14px;}
+#tour-say{min-height:86px;}
+#tour-ask{margin:12px 0 0 62px;font-size:6px;padding:7px 10px;}
+.tour-foot{display:flex;align-items:center;gap:8px;margin-top:14px;}
+#tour-dots{display:flex;gap:4px;}
+#tour-dots i{width:6px;height:6px;border:1px solid #000;background:#fff;}
+#tour-dots i.on{background:#000;}
+#tour-step{font-size:6px;color:#666;margin-right:auto;}
+.tour-link{font-family:'Press Start 2P',monospace;font-size:6px;background:none;border:none;color:#555;text-decoration:underline;cursor:pointer;padding:6px 2px;}
+.tour-link:hover{color:#000;}
+.tour-foot .mac-btn{padding:7px 10px;}
+.tour-foot .mac-btn:disabled{opacity:.35;cursor:default;box-shadow:none;}
+.tour-foot .mac-btn:disabled:hover{background:#fff;color:#000;}
+#tour .mac-btn:focus-visible,.tour-link:focus-visible{outline:2px dashed #000;outline-offset:2px;}
+
+body[data-theme="dark"] .wl-box,body[data-theme="dark"] #tour-card{background:#1e1e1e;color:#e8e8e8;border-color:#777;}
+body[data-theme="dark"] .wl-tb{border-bottom-color:#777;background-image:repeating-linear-gradient(0deg,#666 0,#666 1px,#1e1e1e 1px,#1e1e1e 3px);}
+body[data-theme="dark"] .wl-tb span{background:#1e1e1e;}
+body[data-theme="dark"] .guide-face{filter:invert(1);}
+body[data-theme="dark"] .wl-say,body[data-theme="dark"] #tour-say,
+body[data-theme="dark"] .wl-say::before,body[data-theme="dark"] #tour-say::before{background:#111;color:#e8e8e8;border-color:#999;}
+body[data-theme="dark"] .wl-opt{background:#2a2a2a;color:#e8e8e8;border-color:#999;}
+body[data-theme="dark"] .wl-opt span{color:#bbb;}
+body[data-theme="dark"] .wl-opt canvas{filter:invert(1);}
+body[data-theme="dark"] .wl-opt:hover,body[data-theme="dark"] .wl-opt:focus-visible{background:#e8e8e8;color:#111;box-shadow:4px 4px 0 #000,0 0 0 2px #111 inset;}
+body[data-theme="dark"] .wl-opt:hover span,body[data-theme="dark"] .wl-opt:focus-visible span{color:#333;}
+body[data-theme="dark"] .wl-opt:hover canvas,body[data-theme="dark"] .wl-opt:focus-visible canvas{filter:none;}
+body[data-theme="dark"] .wl-foot,body[data-theme="dark"] #tour-step,body[data-theme="dark"] .tour-link{color:#999;}
+body[data-theme="dark"] #tour-dots i{border-color:#e8e8e8;background:#1e1e1e;}
+body[data-theme="dark"] #tour-dots i.on{background:#e8e8e8;}
+body[data-theme="dark"] .tour-foot .mac-btn:disabled:hover{background:#2a2a2a;color:#ddd;}
+
+@media (max-width:560px){
+  .wl-opts{grid-template-columns:1fr;}
+  .wl-body{padding:16px 14px 12px;}
+  .wl-guide{gap:12px;}
+  .guide-face{width:48px;height:48px;}
+  #tour-ask{margin-left:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  .guide-face,.wl-box{animation:none;}
+  #tour-hole,#tour-card,.wl-opt{transition:none;}
+}
+body[data-theme="dark"] .ie-home-logo{border-color:#555 !important;}
+body[data-theme="dark"] .ie-home-logo canvas{filter:invert(1);}
