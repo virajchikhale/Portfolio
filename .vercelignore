@@ -1,0 +1,5 @@
+backend/
+docs/
+e2e/
+.github/
+tests/
