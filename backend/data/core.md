@@ -6,4 +6,3 @@ Education: B.E. in Artificial Intelligence (CGPA 9.14), Zeal College of Engineer
 Email: chikhaleviraj.work@gmail.com
 GitHub: https://github.com/virajchikhale
 LinkedIn: https://www.linkedin.com/in/viraj-chikhale-024a92201/
-Portfolio: https://virajchikhale.github.io/Portfolio/
