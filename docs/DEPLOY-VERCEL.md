@@ -62,6 +62,13 @@ npm run smoke            # real model, both modes, through the real route handle
 npx vercel dev           # run the whole site locally exactly as Vercel serves it
 ```
 
+## 6. Seeing deployments on GitHub
+
+Vercel always reports a deployment to GitHub as a commit status (the ✓ or ✗ next to a commit). To also list it under the
+repository's **Deployments**, turn on **`deployment_status` Events** in the Vercel project (Settings → Git); it applies to
+deployments created after it is switched on. To check, run `gh api repos/<owner>/<repo>/deployments`: entries created by
+`vercel[bot]` mean it works.
+
 ## What changed from the Python backend
 
 | Python (`backend/`) | TypeScript (`api/`, `lib/`) |
